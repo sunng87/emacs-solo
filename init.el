@@ -19,6 +19,7 @@
   (dired-listing-switches "-lh")
   (inhibit-startup-message t)
   (make-backup-files nil)
+  (ispell-dictionary "en_US")
   :init
   (load-theme 'wombat)
   (set-face-attribute 'default nil :height 140)
