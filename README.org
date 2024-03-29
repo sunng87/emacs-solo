@@ -1,0 +1,22 @@
+#+TITLE: Emacs Solo
+#+AUTHOR: Rahul Martim Juliato
+#+EMAIL: rahul.juliato@gmail.com
+#+OPTIONS: toc: nil
+
+* Emacs Solo
+
+Emacs Solo is a configuration for when I wanna go back to the roots
+and test my self using Emacs with only the built-in goodies.
+
+It is minimalistic and powerfull. A place I visit once in a while.
+
+** Instalation
+
+Save the src_sh[:exports code]{<tag>init.el</tag>} file into a directory
+of your liking and run Emacs with:
+
+#+BEGIN_SRC sh
+emacs --init-directory=YOUR_DIR
+#+END_SRC
+
+And that's it, happy Emacsing! 🐂
