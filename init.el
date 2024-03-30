@@ -9,6 +9,8 @@
 
 (use-package emacs
   :ensure nil
+  :bind
+  (("M-o" . other-window))
   :custom
   (treesit-font-lock-level 4)
   (initial-scratch-message "")
@@ -20,6 +22,8 @@
   (inhibit-startup-message t)
   (make-backup-files nil)
   (ispell-dictionary "en_US")
+  (create-lockfiles nil)
+  (treesit-font-lock-level 4)
   :init
   (load-theme 'wombat)
   (set-face-attribute 'default nil :height 140)
@@ -34,6 +38,10 @@
 
   (when (eq system-type 'darwin)
     (setq mac-command-modifier 'meta))
+
+  (add-to-list 'display-buffer-alist
+               '("^\\*eldoc for" display-buffer-at-bottom
+		 (window-height . 4)))
   
   (message (emacs-init-time)))
 
@@ -69,6 +77,7 @@
   :custom
   (eglot-autoshutdown t)
   (eglot-events-buffer-size 0)
+  (eglot-prefer-plaintext t)
   :init
   (setq eglot-stay-out-of '(flymake))
   :bind (:map
@@ -105,6 +114,7 @@
 
 (use-package typescript-ts-mode
   :ensure typescript-ts-mode
+  :mode "\\.tsx?\\'"
   :defer 't
   :custom
   (typescript-indent-level 2)
@@ -112,6 +122,23 @@
   (add-to-list 'treesit-language-source-alist '(typescript "https://github.com/tree-sitter/tree-sitter-typescript" "master" "typescript/src"))
   (add-to-list 'treesit-language-source-alist '(tsx "https://github.com/tree-sitter/tree-sitter-typescript" "master" "tsx/src"))
   (unbind-key "M-." typescript-ts-base-mode-map))
+
+(use-package rust-ts-mode
+  :ensure rust-ts-mode
+  :mode "\\.rs\\'"
+  :defer 't
+  :custom
+  (rust-indent-level 2)
+  :config
+  (add-to-list 'treesit-language-source-alist '(rust "https://github.com/tree-sitter/tree-sitter-rust" "master" "src"))
+  (unbind-key "M-." typescript-ts-base-mode-map))
+
+(use-package toml-ts-mode
+  :ensure toml-ts-mode
+  :mode "\\.toml\\'"
+  :defer 't
+  :config
+  (add-to-list 'treesit-language-source-alist '(toml "https://github.com/ikatyang/tree-sitter-toml" "master" "src")))
 
 (provide 'init)
 ;;; init.el ends here
