@@ -23,10 +23,9 @@
   (make-backup-files nil)
   (ispell-dictionary "en_US")
   (create-lockfiles nil)
-  (treesit-font-lock-level 4)
   :init
   (load-theme 'wombat)
-  (set-face-attribute 'default nil :height 140)
+  (set-face-attribute 'default nil :height 100)
 
   (when scroll-bar-mode
     (scroll-bar-mode -1))
@@ -139,6 +138,14 @@
   :defer 't
   :config
   (add-to-list 'treesit-language-source-alist '(toml "https://github.com/ikatyang/tree-sitter-toml" "master" "src")))
+
+(use-package markdown-ts-mode
+  :ensure nil
+  :mode ("\\.md\\'" . markdown-ts-mode)
+  :defer 't
+  :config
+  (add-to-list 'treesit-language-source-alist '(markdown "https://github.com/ikatyang/tree-sitter-markdown" "master" "src")))
+
 
 (provide 'init)
 ;;; init.el ends here
