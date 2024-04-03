@@ -60,6 +60,7 @@
     (scroll-bar-mode -1))
   (tool-bar-mode -1)
   (menu-bar-mode -1)
+  (winner-mode) ;; Enables C-c left arrow / C-c right arrow to restore windows layouts
   (fido-vertical-mode)
   (add-hook 'prog-mode-hook 'display-line-numbers-mode)
 
