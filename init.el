@@ -26,15 +26,10 @@
   (create-lockfiles nil)
   (pixel-scroll-precision-mode t)
   (pixel-scroll-precision-use-momentum nil)
+  (completions-format 'one-column)
   :init
   ;;  (load-theme 'wombat)
   (set-face-attribute 'default nil :family "Hack" :height 100)
-
-  (defun my-elisp-mode-hook ()
-    (interactive)
-    (outline-minor-mode 1)
-    (outline-hide-sublevels 1))
-  (add-hook 'emacs-lisp-mode-hook #'my-elisp-mode-hook)
 
 
   (global-set-key (kbd "C-c p") (lambda ()
@@ -61,29 +56,60 @@
 
   (when scroll-bar-mode
     (scroll-bar-mode -1))
-
   (tool-bar-mode -1)
   (menu-bar-mode -1)
-
-  (fido-vertical-mode)
+  (fido-vertical-mode)  
+  (add-hook 'prog-mode-hook 'display-line-numbers-mode)  
 
   (when (eq system-type 'darwin)
     (setq mac-command-modifier 'meta))
 
+
+  ;;; Get add user path so ELISP can gain access to it
+  (defun set-exec-path-from-shell-PATH ()
+    "Set up Emacs' `exec-path' and PATH environment variable to match
+that used by the user's shell.
+
+This is particularly useful under Mac OS X and macOS, where GUI
+apps are not started from a shell."
+    (interactive)
+    (let ((path-from-shell (replace-regexp-in-string
+			    "[ \t\n]*$" "" (shell-command-to-string
+					    "$SHELL --login -c 'echo $PATH'"
+					    ))))
+      (setenv "PATH" path-from-shell)
+      (setq exec-path (split-string path-from-shell path-separator))))
+  (set-exec-path-from-shell-PATH)
+  
+  
+  ;;; Opens Elisp files with all outline sublevels hidden
+  (defun my-elisp-mode-hook ()
+    (interactive)
+    (outline-minor-mode 1)
+    (outline-hide-sublevels 1))
+  (add-hook 'emacs-lisp-mode-hook #'my-elisp-mode-hook)
+
+  ;;; If *Completions* buffer appear on M-TAB, move focus there
+  (defun my-display-completions-hook ()
+    "Hook function to move focus to *Completions* buffer."
+    (when (string= (buffer-name) "*Completions*")
+      (goto-char (point-min))
+      (switch-to-buffer-other-window "*Completions*")))
+  (add-hook 'completion-list-mode-hook #'my-display-completions-hook)
+
+
+  ;;; Makes some poping buffers behave on window places
   (add-to-list 'display-buffer-alist
                '("^\\*eldoc for" display-buffer-at-bottom
 		 (window-height . 10)))
-
   (add-to-list 'display-buffer-alist
                '("^\\*\*Occur" display-buffer-at-bottom
 		 (window-height . 10)))
-
   (add-to-list 'display-buffer-alist
                '("^\\*\*Completions" display-buffer-at-bottom
 		 (window-height . 10)))
 
-  (add-hook 'prog-mode-hook 'display-line-numbers-mode)
-  
+  ;;; Prints init time
   (message (emacs-init-time)))
 
 ;;; ERC
@@ -407,6 +433,10 @@ Available: https://github.com/meritamen/emacs-kanagawa-theme"
    `(window-divider                                ((,class (:foreground ,sumi-ink-2))))
    `(hi-yellow                                     ((,class (:background ,carp-yellow :foreground ,sumi-ink-1b))))
 
+   ;; Tabs
+   `(tab-bar                                       ((,class (:background ,sumi-ink-1b))))
+   `(tab-bar-tab-inactive                          ((,class (:foreground ,sumi-ink-4 :background ,sumi-ink-1b))))
+   
    ;; Font lock
    `(font-lock-type-face                           ((,class (:foreground ,wave-aqua-2))))
    `(font-lock-regexp-grouping-backslash           ((,class (:foreground ,boat-yellow-2))))
@@ -512,15 +542,14 @@ Available: https://github.com/meritamen/emacs-kanagawa-theme"
    `(focus-unfocused                               ((,class (:foreground ,sumi-ink-4)))))
 
   (provide-theme 'emacs-solo)
-
   
   (defun emacs-solo-theme ()
     "Set emacs-solo theme"
     (interactive)
     (enable-theme 'emacs-solo))
-
   (emacs-solo-theme))
 
 (apply-emacs-solo-theme)
 
 (provide 'init)
+;;; init.el ends here
