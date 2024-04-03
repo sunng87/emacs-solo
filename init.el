@@ -11,7 +11,8 @@
 (use-package emacs
   :ensure nil
   :bind
-  (("M-o" . other-window))
+  (("M-o" . other-window)
+   ("C-x C-b" . ibuffer))
   :custom
   (treesit-font-lock-level 4)
   (initial-scratch-message "")
@@ -27,6 +28,7 @@
   (pixel-scroll-precision-mode t)
   (pixel-scroll-precision-use-momentum nil)
   (completions-format 'one-column)
+  (switch-to-buffer-obey-display-actions t)
   :init
   ;;  (load-theme 'wombat)
   (set-face-attribute 'default nil :family "Hack" :height 100)
@@ -58,8 +60,8 @@
     (scroll-bar-mode -1))
   (tool-bar-mode -1)
   (menu-bar-mode -1)
-  (fido-vertical-mode)  
-  (add-hook 'prog-mode-hook 'display-line-numbers-mode)  
+  (fido-vertical-mode)
+  (add-hook 'prog-mode-hook 'display-line-numbers-mode)
 
   (when (eq system-type 'darwin)
     (setq mac-command-modifier 'meta))
@@ -108,6 +110,30 @@ apps are not started from a shell."
   (add-to-list 'display-buffer-alist
                '("^\\*\*Completions" display-buffer-at-bottom
 		 (window-height . 10)))
+
+  (add-to-list 'display-buffer-alist
+	       '("\\*.*e?shell\\*" display-buffer-in-direction
+		 (direction . bottom)
+		 (window . root)
+		 (window-height . 0.3)))
+
+  (add-to-list 'display-buffer-alist
+	       '("\\*xref\\*" display-buffer-in-direction
+		 (direction . bottom)
+		 (window . root)
+		 (window-height . 0.3)))
+
+  (add-to-list 'display-buffer-alist
+	       '("\\*Bookmark List\\*" display-buffer-in-direction
+		 (direction . bottom)
+		 (window . root)
+		 (window-height . 0.3)))
+
+  (add-to-list 'display-buffer-alist
+	       '("\\*Flymake diagnostics" display-buffer-in-direction
+		 (direction . bottom)
+		 (window . root)
+		 (window-height . 0.3)))
 
   ;;; Prints init time
   (message (emacs-init-time)))
