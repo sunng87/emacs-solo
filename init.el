@@ -84,7 +84,9 @@
   ;; initialize customizations
   (emacs-solo/set-exec-path-from-shell-PATH)
   (add-hook 'emacs-lisp-mode-hook #'emacs-solo/elisp-mode-hook)
-;;  (add-hook 'completion-list-mode-hook #'emacs-solo/jump-to-completions)
+
+  ;; Disabled in favor of icomplete
+  ;; (add-hook 'completion-list-mode-hook #'emacs-solo/jump-to-completions)
   
   :init
   (when scroll-bar-mode
@@ -150,6 +152,31 @@
   (erc-hide-list '("JOIN" "PART" "QUIT"))
   (erc-timestamp-format "[%H:%M]")
   (erc-autojoin-channels-alist '((".*\\.libera\\.chat" "#emacs"))))
+
+;;; ICOMPLETE
+(use-package icomplete
+  :bind
+  ((:map icomplete-minibuffer-map
+	 ("C-n" . icomplete-forward-completions)
+	 ("C-p" . icomplete-backward-completions)
+	 ("C-n" . icomplete-forward-completions)
+	 ("C-v" . icomplete-vertical-toggle)
+	 ("RET" . icomplete-force-complete-and-exit)
+	 ))
+  :config
+  (setq icomplete-delay-completions-threshold 0)
+  (setq icomplete-compute-delay 0)
+  (setq icomplete-show-matches-on-no-input t)
+  (setq icomplete-hide-common-prefix nil)
+  (setq icomplete-prospects-height 10)
+  (setq icomplete-separator " . ")
+  (setq icomplete-with-completion-tables t)
+  (setq icomplete-in-buffer t)
+  (setq icomplete-max-delay-chars 0)
+  (setq completion-auto-help nil)
+  (fido-mode -1)
+  (icomplete-mode 1))
+
 
 ;;; DIRED
 (use-package dired
