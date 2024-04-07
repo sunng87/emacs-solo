@@ -3,7 +3,6 @@
 
 ;;; Code:
 
-
 (setq gc-cons-threshold #x40000000)
 (setq read-process-output-max (* 1024 1024 4))
 
@@ -12,27 +11,34 @@
   :ensure nil
   :bind
   (("M-o" . other-window)
-   ("C-x C-b" . ibuffer))
+   ("C-x C-b" . ibuffer)
+   ("M-i" . emacs-solo/window-dired-vc-root-left))
   :custom
-  (treesit-font-lock-level 4)
-  (initial-scratch-message "")
-  (ring-bell-function 'ignore)
-  (truncate-lines t)
-  (delete-selection-mode 1)
-  (dired-kill-when-opening-new-dired-buffer t)
-  (dired-listing-switches "-lh")
-  (inhibit-startup-message t)
-  (make-backup-files nil)
-  (ispell-dictionary "en_US")
+  (column-number-mode t)
+  (completions-format 'one-column)
   (create-lockfiles nil)
+  (delete-by-moving-to-trash t)
+  (delete-selection-mode 1)
+  (dired-dwim-target t)
+  (dired-guess-shell-alist-user
+   '(("\\.\\(png\\|jpe?g\\|tiff\\)" "feh" "xdg-open" "open")
+     ("\\.\\(mp[34]\\|m4a\\|ogg\\|flac\\|webm\\|mkv\\)" "mpv" "xdg-open" "open")
+     (".*" "xdg-open")))
+  (dired-kill-when-opening-new-dired-buffer t)
+  (dired-listing-switches "-al --group-directories-first")
+  (inhibit-startup-message t)
+  (initial-scratch-message "")
+  (ispell-dictionary "en_US")
+  (make-backup-files nil)
   (pixel-scroll-precision-mode t)
   (pixel-scroll-precision-use-momentum nil)
-  (completions-format 'one-column)
+  (ring-bell-function 'ignore)
   (switch-to-buffer-obey-display-actions t)
-  :init
-  ;;  (load-theme 'wombat)
-  (set-face-attribute 'default nil :family "Hack" :height 100)
+  (treesit-font-lock-level 4)
+  (truncate-lines t)
+  :config
 
+  (set-face-attribute 'default nil :family "Hack" :height 100)
 
   (global-set-key (kbd "C-c p") (lambda ()
 				  (interactive)
@@ -54,27 +60,9 @@
 				    (goto-char (window-start))
 				    (forward-line midpoint)
 				    (recenter midpoint)))))
-  
 
-  (when scroll-bar-mode
-    (scroll-bar-mode -1))
-  (tool-bar-mode -1)
-  (menu-bar-mode -1)
-  (winner-mode) ;; Enables C-c left arrow / C-c right arrow to restore windows layouts
-  (fido-vertical-mode)
-  (add-hook 'prog-mode-hook 'display-line-numbers-mode)
-
-  (when (eq system-type 'darwin)
-    (setq mac-command-modifier 'meta))
-
-
-  ;;; Get add user path so ELISP can gain access to it
-  (defun set-exec-path-from-shell-PATH ()
-    "Set up Emacs' `exec-path' and PATH environment variable to match
-that used by the user's shell.
-
-This is particularly useful under Mac OS X and macOS, where GUI
-apps are not started from a shell."
+  (defun emacs-solo/set-exec-path-from-shell-PATH ()
+    "Set up Emacs' `exec-path' and PATH environment the same as user Shell."
     (interactive)
     (let ((path-from-shell (replace-regexp-in-string
 			    "[ \t\n]*$" "" (shell-command-to-string
@@ -82,62 +70,80 @@ apps are not started from a shell."
 					    ))))
       (setenv "PATH" path-from-shell)
       (setq exec-path (split-string path-from-shell path-separator))))
-  (set-exec-path-from-shell-PATH)
-  
-  
-  ;;; Opens Elisp files with all outline sublevels hidden
-  (defun my-elisp-mode-hook ()
+
+  (defun emacs-solo/elisp-mode-hook ()
     (interactive)
     (outline-minor-mode 1)
     (outline-hide-sublevels 1))
-  (add-hook 'emacs-lisp-mode-hook #'my-elisp-mode-hook)
 
-  ;;; If *Completions* buffer appear on M-TAB, move focus there
-  (defun my-display-completions-hook ()
+  (defun emacs-solo/jump-to-completions ()
     "Hook function to move focus to *Completions* buffer."
     (when (string= (buffer-name) "*Completions*")
       (goto-char (point-min))
       (switch-to-buffer-other-window "*Completions*")))
-  (add-hook 'completion-list-mode-hook #'my-display-completions-hook)
 
 
-  ;;; Makes some poping buffers behave on window places
-  (add-to-list 'display-buffer-alist
-               '("^\\*eldoc for" display-buffer-at-bottom
-		 (window-height . 10)))
-  (add-to-list 'display-buffer-alist
-               '("^\\*\*Occur" display-buffer-at-bottom
-		 (window-height . 10)))
-  (add-to-list 'display-buffer-alist
-               '("^\\*\*Completions" display-buffer-at-bottom
-		 (window-height . 10)))
+  ;; initialize customizations
+  (emacs-solo/set-exec-path-from-shell-PATH)
+  (add-hook 'emacs-lisp-mode-hook #'emacs-solo/elisp-mode-hook)
+  (add-hook 'completion-list-mode-hook #'emacs-solo/jump-to-completions)
+  
+  :init
+  (when scroll-bar-mode
+    (scroll-bar-mode -1))
+  (tool-bar-mode -1)
+  (menu-bar-mode -1)
+  (winner-mode)
+  (xterm-mouse-mode 1)
+  (fido-vertical-mode)
+  (file-name-shadow-mode 1)
+  (add-hook 'prog-mode-hook 'display-line-numbers-mode)
 
-  (add-to-list 'display-buffer-alist
-	       '("\\*.*e?shell\\*" display-buffer-in-direction
-		 (direction . bottom)
-		 (window . root)
-		 (window-height . 0.3)))
-
-  (add-to-list 'display-buffer-alist
-	       '("\\*xref\\*" display-buffer-in-direction
-		 (direction . bottom)
-		 (window . root)
-		 (window-height . 0.3)))
-
-  (add-to-list 'display-buffer-alist
-	       '("\\*Bookmark List\\*" display-buffer-in-direction
-		 (direction . bottom)
-		 (window . root)
-		 (window-height . 0.3)))
-
-  (add-to-list 'display-buffer-alist
-	       '("\\*Flymake diagnostics" display-buffer-in-direction
-		 (direction . bottom)
-		 (window . root)
-		 (window-height . 0.3)))
-
+  (when (eq system-type 'darwin)
+    (setq mac-command-modifier 'meta))
+  
   ;;; Prints init time
+
+  (with-current-buffer (get-buffer-create "*scratch*")
+    (insert (format ";;
+;; ███████╗███╗   ███╗ █████╗  ██████╗███████╗    ███████╗ ██████╗ ██╗      ██████╗
+;; ██╔════╝████╗ ████║██╔══██╗██╔════╝██╔════╝    ██╔════╝██╔═══██╗██║     ██╔═══██╗
+;; █████╗  ██╔████╔██║███████║██║     ███████╗    ███████╗██║   ██║██║     ██║   ██║
+;; ██╔══╝  ██║╚██╔╝██║██╔══██║██║     ╚════██║    ╚════██║██║   ██║██║     ██║   ██║
+;; ███████╗██║ ╚═╝ ██║██║  ██║╚██████╗███████║    ███████║╚██████╔╝███████╗╚██████╔╝
+;; ╚══════╝╚═╝     ╚═╝╚═╝  ╚═╝ ╚═════╝╚══════╝    ╚══════╝ ╚═════╝ ╚══════╝ ╚═════╝
+;;
+;;   Loading time : %s
+;;   Packages     : %s
+;;
+"
+  (emacs-init-time)
+  (number-to-string (length package-activated-list)))))
+  
   (message (emacs-init-time)))
+
+;;; WINDOW Management
+(use-package window
+  :ensure nil
+  :custom
+  (display-buffer-alist
+   '(("\\*.*e?shell\\*"
+      (display-buffer-in-side-window)
+      (window-height . 0.25)
+      (side . bottom)
+      (slot . -1))
+     ("\\*\\(Backtrace\\|Warnings\\|Compile-Log\\|[Hh]elp\\|Messages\\|Bookmark List\\|Ibuffer\\|Occur\\|eldoc\\)\\*"
+      (display-buffer-in-side-window)
+      (window-height . 0.25)
+      (side . bottom)
+      (slot . 0))
+     ("\\*\\(Flymake diagnostics\\|xref\\|Completions\\)"
+      (display-buffer-in-side-window)
+      (window-height . 0.25)
+      (side . bottom)
+      (slot . 1)))
+   
+   ))
 
 ;;; ERC
 (use-package erc
@@ -146,6 +152,44 @@ apps are not started from a shell."
   (erc-hide-list '("JOIN" "PART" "QUIT"))
   (erc-timestamp-format "[%H:%M]")
   (erc-autojoin-channels-alist '((".*\\.libera\\.chat" "#emacs"))))
+
+;;; DIRED
+(use-package dired
+  :defer t
+  :custom
+  (defun emacs-solo/window-dired-vc-root-left (&optional directory-path)
+    "Creates *Dired-Side* like an IDE side explorer"
+    (interactive)
+    (add-hook 'dired-mode-hook 'dired-hide-details-mode)
+
+    (let ((dir (if directory-path
+                   (dired-noselect directory-path)
+		 (if (eq (vc-root-dir) nil)
+                     (dired-noselect default-directory)
+                   (dired-noselect (vc-root-dir))))))
+
+      (display-buffer-in-side-window
+       dir `((side . left)
+	     (slot . 0)
+	     (window-width . 0.2)
+	     (window-parameters . ((no-other-window . t)
+				   (no-delete-other-windows . t)
+				   (mode-line-format . (" "
+							"%b"))))))
+      (with-current-buffer dir
+	(let ((window (get-buffer-window dir)))
+          (when window
+            (select-window window)
+	    (rename-buffer "*Dired-Side*")
+	    )))))
+
+  (defun emacs-solo/window-dired-open-directory ()
+    "Open the current directory in *Dired-Side* side window."
+    (interactive)
+    (emacs-solo/window-dired-vc-root-left (dired-get-file-for-visit)))
+
+  (define-key dired-mode-map (kbd "G") 'emacs-solo/window-dired-open-directory))
+  
 
 ;;; ESHELL
 (use-package eshell
@@ -580,3 +624,4 @@ Available: https://github.com/meritamen/emacs-kanagawa-theme"
 
 (provide 'init)
 ;;; init.el ends here
+(put 'dired-find-alternate-file 'disabled nil)
