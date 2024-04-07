@@ -11,8 +11,7 @@
   :ensure nil
   :bind
   (("M-o" . other-window)
-   ("C-x C-b" . ibuffer)
-   ("M-i" . emacs-solo/window-dired-vc-root-left))
+   ("C-x C-b" . ibuffer))
   :custom
   (column-number-mode t)
   (completions-format 'one-column)
@@ -37,7 +36,6 @@
   (treesit-font-lock-level 4)
   (truncate-lines t)
   :config
-
   (set-face-attribute 'default nil :family "Hack" :height 100)
 
   (global-set-key (kbd "C-c p") (lambda ()
@@ -86,7 +84,7 @@
   ;; initialize customizations
   (emacs-solo/set-exec-path-from-shell-PATH)
   (add-hook 'emacs-lisp-mode-hook #'emacs-solo/elisp-mode-hook)
-  (add-hook 'completion-list-mode-hook #'emacs-solo/jump-to-completions)
+;;  (add-hook 'completion-list-mode-hook #'emacs-solo/jump-to-completions)
   
   :init
   (when scroll-bar-mode
@@ -122,7 +120,7 @@
   
   (message (emacs-init-time)))
 
-;;; WINDOW Management
+;;; WINDOW
 (use-package window
   :ensure nil
   :custom
@@ -155,8 +153,9 @@
 
 ;;; DIRED
 (use-package dired
-  :defer t
-  :custom
+  :bind
+  (("M-i" . emacs-solo/window-dired-vc-root-left))
+  :init
   (defun emacs-solo/window-dired-vc-root-left (&optional directory-path)
     "Creates *Dired-Side* like an IDE side explorer"
     (interactive)
@@ -188,7 +187,9 @@
     (interactive)
     (emacs-solo/window-dired-vc-root-left (dired-get-file-for-visit)))
 
-  (define-key dired-mode-map (kbd "G") 'emacs-solo/window-dired-open-directory))
+  (eval-after-load 'dired
+  '(progn
+     (define-key dired-mode-map (kbd "G") 'emacs-solo/window-dired-open-directory))))
   
 
 ;;; ESHELL
@@ -341,8 +342,7 @@
   :custom
   (rust-indent-level 2)
   :config
-  (add-to-list 'treesit-language-source-alist '(rust "https://github.com/tree-sitter/tree-sitter-rust" "master" "src"))
-  (unbind-key "M-." typescript-ts-base-mode-map))
+  (add-to-list 'treesit-language-source-alist '(rust "https://github.com/tree-sitter/tree-sitter-rust" "master" "src")))
 
 ;;; TOML-TS-MODE
 (use-package toml-ts-mode
@@ -418,10 +418,13 @@ Available: https://github.com/meritamen/emacs-kanagawa-theme"
 
   (eval
     (defvar emacs-solo-dark-palette
-      `((fuji-white       ,(if (true-color-p) "#DCD7BA" "#ffffff"))
+      `(
+	;; (fuji-white       ,(if (true-color-p) "#DCD7BA" "#ffffff"))
+	(fuji-white       ,(if (true-color-p) "#ffffff" "#ffffff"))
 	(old-white        ,(if (true-color-p) "#C8C093" "#ffffff"))
 	(sumi-ink-0       ,(if (true-color-p) "#16161D" "#000000"))
-	(sumi-ink-1b      ,(if (true-color-p) "#1f1f28" "#000000"))
+	;; (sumi-ink-1b      ,(if (true-color-p) "#1f1f28" "#000000"))
+	(sumi-ink-1b      ,(if (true-color-p) "#1e1e2e" "#000000"))
 	(sumi-ink-1       ,(if (true-color-p) "#1F1F28" "#080808"))
 	(sumi-ink-2       ,(if (true-color-p) "#2A2A37" "#121212"))
 	(sumi-ink-3       ,(if (true-color-p) "#363646" "#303030"))
@@ -440,16 +443,20 @@ Available: https://github.com/meritamen/emacs-kanagawa-theme"
 	(samurai-red      ,(if (true-color-p) "#E82424" "#585858"))
 	(ronin-yellow     ,(if (true-color-p) "#FF9E3B" "#585858"))
 	(dragon-blue      ,(if (true-color-p) "#658594" "#658594"))
-	(fuji-gray        ,(if (true-color-p) "#727169" "#717C7C"))
+	;; (fuji-gray        ,(if (true-color-p) "#727169" "#717C7C"))
+	(fuji-gray        ,(if (true-color-p) "#6c7086" "#717C7C"))
 	(spring-violet-1  ,(if (true-color-p) "#938AA9" "#717C7C"))
 	(oni-violet       ,(if (true-color-p) "#957FB8" "#717C7C"))
 	(crystal-blue     ,(if (true-color-p) "#7E9CD8" "#717C7C"))
 	(spring-violet-2  ,(if (true-color-p) "#9CABCA" "#717C7C"))
 	(spring-blue      ,(if (true-color-p) "#7FB4CA" "#717C7C"))
 	(light-blue       ,(if (true-color-p) "#A3D4D5" "#717C7C"))
-	(spring-green     ,(if (true-color-p) "#98BB6C" "#717C7C"))
+	;; (spring-green     ,(if (true-color-p) "#98BB6C" "#717C7C"))
+	(spring-green     ,(if (true-color-p) "#a0da9c" "#717C7C"))
 	(boat-yellow-1    ,(if (true-color-p) "#938056" "#717C7C"))
-	(boat-yellow-2    ,(if (true-color-p) "#C0A36E" "#717C7C"))
+	;; (boat-yellow-2    ,(if (true-color-p) "#C0A36E" "#717C7C"))
+	(boat-yellow-2    ,(if (true-color-p) "#ec03ed" "#717C7C"))
+	(light-yellow     ,(if (true-color-p) "#f9e2af" "#717C7C"))
 	(carp-yellow      ,(if (true-color-p) "#E6C384" "#717C7C"))
 	(sakura-pink      ,(if (true-color-p) "#D27E99" "#717C7C"))
 	(wave-red         ,(if (true-color-p) "#E46876" "#717C7C"))
@@ -489,8 +496,8 @@ Available: https://github.com/meritamen/emacs-kanagawa-theme"
    `(match                                         ((,class (:background ,carp-yellow :foreground ,sumi-ink-0))))
    `(menu                                          ((,class (:background ,sumi-ink-0 :foreground ,fuji-white))))
    `(mode-line                                     ((,class (:background ,sumi-ink-0))))
-   `(mode-line-inactive                            ((,class (:background unspecified :foreground ,sumi-ink-4))))
-   `(mode-line-active                              ((,class (:background ,sumi-ink-0 :foreground ,old-white))))
+   `(mode-line-inactive                            ((,class (:background unspecified :foreground ,fuji-white))))
+   `(mode-line-active                              ((,class (:background ,sumi-ink-0 :foreground ,fuji-white))))
    `(mode-line-highlight                           ((,class (:foreground ,boat-yellow-2))))
    `(mode-line-buffer-id                           ((,class (:foreground ,wave-aqua-2 :weight bold))))
    `(numbers                                       ((,class (:background ,sakura-pink))))
@@ -509,7 +516,7 @@ Available: https://github.com/meritamen/emacs-kanagawa-theme"
    `(tab-bar-tab-inactive                          ((,class (:foreground ,sumi-ink-4 :background ,sumi-ink-1b))))
    
    ;; Font lock
-   `(font-lock-type-face                           ((,class (:foreground ,wave-aqua-2))))
+   `(font-lock-type-face                           ((,class (:foreground ,light-yellow))))
    `(font-lock-regexp-grouping-backslash           ((,class (:foreground ,boat-yellow-2))))
    `(font-lock-keyword-face                        ((,class (:foreground ,oni-violet :weight semi-bold :slant ,(if emacs-solo-theme-keyword-italic 'italic 'normal)))))
    `(font-lock-warning-face                        ((,class (:foreground ,ronin-yellow))))
@@ -524,11 +531,11 @@ Available: https://github.com/meritamen/emacs-kanagawa-theme"
    `(font-lock-comment-delimiter-face              ((,class (:foreground ,fuji-gray :slant ,(if emacs-solo-theme-keyword-italic 'italic 'normal)))))
    `(font-lock-doc-face                            ((,class (:foreground ,comet))))
    `(font-lock-doc-markup-face                     ((,class (:foreground ,comet))))
-   `(font-lock-preprocessor-face                   ((,class (:foreground ,boat-yellow-2))))
+   `(font-lock-preprocessor-face                   ((,class (:foreground ,light-yellow))))
    `(elisp-shorthand-font-lock-face                ((,class (:foreground ,fuji-white))))
    `(info-xref                                     ((,class (:foreground ,carp-yellow))))
    `(minibuffer-prompt-end                         ((,class (:foreground ,autumn-red :background ,winter-red))))
-   `(minibuffer-prompt                             ((,class (:foreground ,carp-yellow :background ,winter-yellow))))
+   `(minibuffer-prompt                             ((,class (:foreground ,carp-yellow))))
    `(epa-mark                                      ((,class (:foreground ,wave-red))))
    `(dired-mark                                    ((,class (:foreground ,wave-red))))
    `(trailing-whitespace                           ((,class (:background ,comet))))
@@ -609,6 +616,9 @@ Available: https://github.com/meritamen/emacs-kanagawa-theme"
    `(ansi-color-yellow                             ((,class (:foreground ,autumn-yellow))))
    `(ansi-color-bright-white                       ((,class (:foreground ,old-white))))
    `(ansi-color-bright-white                       ((,class (:foreground ,old-white))))
+
+   ;; eglot
+   `(eglot-inlay-hint-face      ((,class (:foreground ,fuji-gray :background ,sumi-ink-1b :height 0.8))))
 
    `(focus-unfocused                               ((,class (:foreground ,sumi-ink-4)))))
 
