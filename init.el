@@ -104,7 +104,7 @@
   (defun emacs-solo/git-gutter-add-mark ()
     "Add symbols to the margin based on Git diff statuses."
     (interactive)
-    (let ((lines-status (my-process-git-diff)))
+    (let ((lines-status (emacs-solo/git-gutter-process-git-diff)))
       (remove-overlays)
       (save-excursion
         (goto-char (point-min))
