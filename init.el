@@ -35,37 +35,39 @@
   (switch-to-buffer-obey-display-actions t)
   (treesit-font-lock-level 4)
   (truncate-lines t)
+  (tab-width 4)
+  (indent-tabs-mode nil)
   :config
   (set-face-attribute 'default nil :family "Hack" :height 100)
 
   (global-set-key (kbd "C-c p") (lambda ()
-				  (interactive)
-				  (shell-command (concat "prettier --write " (shell-quote-argument (buffer-file-name))))
-				  (revert-buffer t t t)))
+                  (interactive)
+                  (shell-command (concat "prettier --write " (shell-quote-argument (buffer-file-name))))
+                  (revert-buffer t t t)))
 
   (global-set-key (kbd "C-v") (lambda ()
-				(interactive)
-				(scroll-up-command)
-				(recenter)
-				))
+                (interactive)
+                (scroll-up-command)
+                (recenter)
+                ))
   (global-set-key (kbd "M-v") (lambda ()
-				(interactive)
-				(scroll-down-command)
-				(unless (= (window-start) (point-min))
-				  (recenter))
-				(when (= (window-start) (point-min))
-				  (let ((midpoint (/ (window-height) 2)))
-				    (goto-char (window-start))
-				    (forward-line midpoint)
-				    (recenter midpoint)))))
+                (interactive)
+                (scroll-down-command)
+                (unless (= (window-start) (point-min))
+                  (recenter))
+                (when (= (window-start) (point-min))
+                  (let ((midpoint (/ (window-height) 2)))
+                    (goto-char (window-start))
+                    (forward-line midpoint)
+                    (recenter midpoint)))))
 
   (defun emacs-solo/set-exec-path-from-shell-PATH ()
     "Set up Emacs' `exec-path' and PATH environment the same as user Shell."
     (interactive)
     (let ((path-from-shell (replace-regexp-in-string
-			    "[ \t\n]*$" "" (shell-command-to-string
-					    "$SHELL --login -c 'echo $PATH'"
-					    ))))
+                "[ \t\n]*$" "" (shell-command-to-string
+                        "$SHELL --login -c 'echo $PATH'"
+                        ))))
       (setenv "PATH" path-from-shell)
       (setq exec-path (split-string path-from-shell path-separator))))
 
@@ -80,6 +82,58 @@
       (goto-char (point-min))
       (switch-to-buffer-other-window "*Completions*")))
 
+  (defun emacs-solo/git-gutter-process-git-diff ()
+    "Process git diff for adds/mods/removals. Still doesn't diff adds/mods."
+    (interactive)
+    (let* ((file-path (buffer-file-name))
+           (output (shell-command-to-string (format "git diff --unified=0 %s | grep -Po '^@@ -[0-9]+(,[0-9]+)? \\+\\K[0-9]+(,[0-9]+)?(?= @@)'" file-path))))
+      (setq lines (split-string output "\n"))
+      (setq result '())
+      (dolist (line lines)
+        (if (string-match "\\(^[0-9]+\\),\\([0-9]+\\)\\(?:,0\\)?$" line)
+            (let ((num (string-to-number (match-string 1 line)))
+                  (count (string-to-number (match-string 2 line))))
+              (if (= count 0)
+                  (add-to-list 'result (cons num "deleted"))
+                (dotimes (i count)
+                  (add-to-list 'result (cons (+ num i) "added"))))))
+        (if (string-match "\\(^[0-9]+\\)$" line)
+            (add-to-list 'result (cons (string-to-number line) "added")))))
+    result)
+
+  (defun emacs-solo/git-gutter-add-mark ()
+    "Add symbols to the margin based on Git diff statuses."
+    (interactive)
+    (let ((lines-status (my-process-git-diff)))
+      (remove-overlays)
+      (save-excursion
+        (goto-char (point-min))
+        (while (not (eobp))
+          (let* ((line-num (line-number-at-pos))
+                 (status (cdr (assoc line-num lines-status))))
+            (when status
+              (move-to-column 0 t)
+              (let ((overlay (make-overlay (point-at-bol) (point-at-eol))))
+                (overlay-put overlay 'before-string
+                             (propertize (if (string= status "added") "+" "-")
+                                         'face (if (string= status "added")
+                                                   '(:foreground "green")
+                                                 '(:foreground "red")))))
+              (forward-line))
+            (unless status
+              (move-to-column 0 t)
+              (let ((overlay (make-overlay (point-at-bol) (point-at-bol))))
+                (overlay-put overlay 'before-string " "))
+              (forward-line)))))))
+
+  (defun emacs-solo/git-gutter-remove-marks ()
+    "Greedly remove all git gutter marks and other overlays."
+    (interactive)
+    (remove-overlays))
+
+  (global-set-key (kbd "C-c g r") 'emacs-solo/git-gutter-remove-marks)
+  (global-set-key (kbd "C-c g g") 'emacs-solo/git-gutter-add-mark)
+  
 
   ;; initialize customizations
   (emacs-solo/set-exec-path-from-shell-PATH)
@@ -157,12 +211,12 @@
 (use-package icomplete
   :bind
   ((:map icomplete-minibuffer-map
-	 ("C-n" . icomplete-forward-completions)
-	 ("C-p" . icomplete-backward-completions)
-	 ("C-n" . icomplete-forward-completions)
-	 ("C-v" . icomplete-vertical-toggle)
-	 ("RET" . icomplete-force-complete-and-exit)
-	 ))
+     ("C-n" . icomplete-forward-completions)
+     ("C-p" . icomplete-backward-completions)
+     ("C-n" . icomplete-forward-completions)
+     ("C-v" . icomplete-vertical-toggle)
+     ("RET" . icomplete-force-complete-and-exit)
+     ))
   :config
   (setq icomplete-delay-completions-threshold 0)
   (setq icomplete-compute-delay 0)
@@ -190,24 +244,24 @@
 
     (let ((dir (if directory-path
                    (dired-noselect directory-path)
-		 (if (eq (vc-root-dir) nil)
+         (if (eq (vc-root-dir) nil)
                      (dired-noselect default-directory)
                    (dired-noselect (vc-root-dir))))))
 
       (display-buffer-in-side-window
        dir `((side . left)
-	     (slot . 0)
-	     (window-width . 0.2)
-	     (window-parameters . ((no-other-window . t)
-				   (no-delete-other-windows . t)
-				   (mode-line-format . (" "
-							"%b"))))))
+         (slot . 0)
+         (window-width . 0.2)
+         (window-parameters . ((no-other-window . t)
+                   (no-delete-other-windows . t)
+                   (mode-line-format . (" "
+                            "%b"))))))
       (with-current-buffer dir
-	(let ((window (get-buffer-window dir)))
+    (let ((window (get-buffer-window dir)))
           (when window
             (select-window window)
-	    (rename-buffer "*Dired-Side*")
-	    )))))
+        (rename-buffer "*Dired-Side*")
+        )))))
 
   (defun emacs-solo/window-dired-open-directory ()
     "Open the current directory in *Dired-Side* side window."
@@ -224,46 +278,46 @@
   :after (:all emacs)
   :config
   (add-hook 'eshell-mode-hook
-	    (lambda ()
+        (lambda ()
               (local-set-key (kbd "C-l")
-			     (lambda ()
+                 (lambda ()
                                (interactive)
                                (eshell/clear 1)
-			       (eshell-send-input)
-			       ))))
+                   (eshell-send-input)
+                   ))))
 
   (setq eshell-prompt-function
-	(lambda ()
+    (lambda ()
           (concat
            "┌─("
-	   (if (> eshell-last-command-status 0)
-	       "⛒"
-	     "✓")
-	   " "
-	   (number-to-string eshell-last-command-status)
+       (if (> eshell-last-command-status 0)
+           "⛒"
+         "✓")
+       " "
+       (number-to-string eshell-last-command-status)
            ")──("
-	   "Ꜫ"
-	   " "
-	   (user-login-name)
+       "Ꜫ"
+       " "
+       (user-login-name)
            ")──("
-	   "⏲"
-	   " "
+       "⏲"
+       " "
            (format-time-string "%H:%M:%S" (current-time))
            ")──("
-	   "🗁"
-	   " "
+       "🗁"
+       " "
            (concat (if (>= (length (eshell/pwd)) 40)
-		       (concat "..." (car (last (butlast (split-string (eshell/pwd) "/") 0))))
-		     (abbreviate-file-name (eshell/pwd))))
+               (concat "..." (car (last (butlast (split-string (eshell/pwd) "/") 0))))
+             (abbreviate-file-name (eshell/pwd))))
            ")\n"
-	   (if (car (vc-git-branches))
-	       (concat
-		"├─("
-		"⎇"
-		" "
-		(car (vc-git-branches))
-		")\n"
-		))
+       (if (car (vc-git-branches))
+           (concat
+        "├─("
+        "⎇"
+        " "
+        (car (vc-git-branches))
+        ")\n"
+        ))
            "└─➜ ")))
 
   (setq eshell-prompt-regexp "└─➜ ")
@@ -271,9 +325,9 @@
   (add-hook 'eshell-mode-hook (lambda () (setenv "TERM" "xterm-256color")))
 
   (setq eshell-visual-commands
-		'("vi" "screen" "top"  "htop" "btm" "less" "more" "lynx" "ncftp" "pine" "tin" "trn"
-		  "elm" "irssi" "nmtui-connect" "nethack" "vim" "alsamixer" "nvim" "w3m"
-		  "ncmpcpp" "newsbeuter" "nethack" "mutt")))
+        '("vi" "screen" "top"  "htop" "btm" "less" "more" "lynx" "ncftp" "pine" "tin" "trn"
+          "elm" "irssi" "nmtui-connect" "nethack" "vim" "alsamixer" "nvim" "w3m"
+          "ncmpcpp" "newsbeuter" "nethack" "mutt")))
 
 ;;; ISEARCH
 (use-package isearch
@@ -439,64 +493,64 @@ Available: https://github.com/meritamen/emacs-kanagawa-theme"
 
   (defun true-color-p ()
     (or (display-graphic-p)
-	(= (tty-display-color-cells) 16777216)))
+    (= (tty-display-color-cells) 16777216)))
 
   (deftheme emacs-solo "An elegant theme inspired by The Great Wave off Emacs-Solo by Katsushika Hokusa")
 
   (eval
     (defvar emacs-solo-dark-palette
       `(
-	;; (fuji-white       ,(if (true-color-p) "#DCD7BA" "#ffffff"))
-	(fuji-white       ,(if (true-color-p) "#ffffff" "#ffffff"))
-	(old-white        ,(if (true-color-p) "#C8C093" "#ffffff"))
-	(sumi-ink-0       ,(if (true-color-p) "#16161D" "#000000"))
-	;; (sumi-ink-1b      ,(if (true-color-p) "#1f1f28" "#000000"))
-	(sumi-ink-1b      ,(if (true-color-p) "#1e1e2e" "#000000"))
-	(sumi-ink-1       ,(if (true-color-p) "#1F1F28" "#080808"))
-	(sumi-ink-2       ,(if (true-color-p) "#2A2A37" "#121212"))
-	(sumi-ink-3       ,(if (true-color-p) "#363646" "#303030"))
-	(sumi-ink-4       ,(if (true-color-p) "#54546D" "#303030"))
-	(wave-blue-1      ,(if (true-color-p) "#223249" "#4e4e4e"))
-	(wave-blue-2      ,(if (true-color-p) "#2D4F67" "#585858"))
-	(wave-aqua-1      ,(if (true-color-p) "#6A9589" "#6a9589"))
-	(wave-aqua-2      ,(if (true-color-p) "#7AA89F" "#717C7C"))
-	(winter-green     ,(if (true-color-p) "#2B3328" "#585858"))
-	(winter-yellow    ,(if (true-color-p) "#49443C" "#585858"))
-	(winter-red       ,(if (true-color-p) "#43242B" "#585858"))
-	(winter-blue      ,(if (true-color-p) "#252535" "#585858"))
-	(autumn-green     ,(if (true-color-p) "#76946A" "#585858"))
-	(autumn-red       ,(if (true-color-p) "#C34043" "#585858"))
-	(autumn-yellow    ,(if (true-color-p) "#DCA561" "#585858"))
-	(samurai-red      ,(if (true-color-p) "#E82424" "#585858"))
-	(ronin-yellow     ,(if (true-color-p) "#FF9E3B" "#585858"))
-	(dragon-blue      ,(if (true-color-p) "#658594" "#658594"))
-	;; (fuji-gray        ,(if (true-color-p) "#727169" "#717C7C"))
-	(fuji-gray        ,(if (true-color-p) "#6c7086" "#717C7C"))
-	(spring-violet-1  ,(if (true-color-p) "#938AA9" "#717C7C"))
-	(oni-violet       ,(if (true-color-p) "#957FB8" "#717C7C"))
-	(crystal-blue     ,(if (true-color-p) "#7E9CD8" "#717C7C"))
-	(spring-violet-2  ,(if (true-color-p) "#9CABCA" "#717C7C"))
-	(spring-blue      ,(if (true-color-p) "#7FB4CA" "#717C7C"))
-	(light-blue       ,(if (true-color-p) "#A3D4D5" "#717C7C"))
-	;; (spring-green     ,(if (true-color-p) "#98BB6C" "#717C7C"))
-	(spring-green     ,(if (true-color-p) "#a0da9c" "#717C7C"))
-	(boat-yellow-1    ,(if (true-color-p) "#938056" "#717C7C"))
-	;; (boat-yellow-2    ,(if (true-color-p) "#C0A36E" "#717C7C"))
-	(boat-yellow-2    ,(if (true-color-p) "#ec03ed" "#717C7C"))
-	(light-yellow     ,(if (true-color-p) "#f9e2af" "#717C7C"))
-	(carp-yellow      ,(if (true-color-p) "#E6C384" "#717C7C"))
-	(sakura-pink      ,(if (true-color-p) "#D27E99" "#717C7C"))
-	(wave-red         ,(if (true-color-p) "#E46876" "#717C7C"))
-	(peach-red        ,(if (true-color-p) "#FF5D62" "#717C7C"))
-	(surimi-orange    ,(if (true-color-p) "#FFA066" "#717C7C"))
-	(katana-gray      ,(if (true-color-p) "#717C7C" "#717C7C"))
-	(comet            ,(if (true-color-p) "#54536D" "#4e4e4e")))))
+    ;; (fuji-white       ,(if (true-color-p) "#DCD7BA" "#ffffff"))
+    (fuji-white       ,(if (true-color-p) "#ffffff" "#ffffff"))
+    (old-white        ,(if (true-color-p) "#C8C093" "#ffffff"))
+    (sumi-ink-0       ,(if (true-color-p) "#16161D" "#000000"))
+    ;; (sumi-ink-1b      ,(if (true-color-p) "#1f1f28" "#000000"))
+    (sumi-ink-1b      ,(if (true-color-p) "#1e1e2e" "#000000"))
+    (sumi-ink-1       ,(if (true-color-p) "#1F1F28" "#080808"))
+    (sumi-ink-2       ,(if (true-color-p) "#2A2A37" "#121212"))
+    (sumi-ink-3       ,(if (true-color-p) "#363646" "#303030"))
+    (sumi-ink-4       ,(if (true-color-p) "#54546D" "#303030"))
+    (wave-blue-1      ,(if (true-color-p) "#223249" "#4e4e4e"))
+    (wave-blue-2      ,(if (true-color-p) "#2D4F67" "#585858"))
+    (wave-aqua-1      ,(if (true-color-p) "#6A9589" "#6a9589"))
+    (wave-aqua-2      ,(if (true-color-p) "#7AA89F" "#717C7C"))
+    (winter-green     ,(if (true-color-p) "#2B3328" "#585858"))
+    (winter-yellow    ,(if (true-color-p) "#49443C" "#585858"))
+    (winter-red       ,(if (true-color-p) "#43242B" "#585858"))
+    (winter-blue      ,(if (true-color-p) "#252535" "#585858"))
+    (autumn-green     ,(if (true-color-p) "#76946A" "#585858"))
+    (autumn-red       ,(if (true-color-p) "#C34043" "#585858"))
+    (autumn-yellow    ,(if (true-color-p) "#DCA561" "#585858"))
+    (samurai-red      ,(if (true-color-p) "#E82424" "#585858"))
+    (ronin-yellow     ,(if (true-color-p) "#FF9E3B" "#585858"))
+    (dragon-blue      ,(if (true-color-p) "#658594" "#658594"))
+    ;; (fuji-gray        ,(if (true-color-p) "#727169" "#717C7C"))
+    (fuji-gray        ,(if (true-color-p) "#6c7086" "#717C7C"))
+    (spring-violet-1  ,(if (true-color-p) "#938AA9" "#717C7C"))
+    (oni-violet       ,(if (true-color-p) "#957FB8" "#717C7C"))
+    (crystal-blue     ,(if (true-color-p) "#7E9CD8" "#717C7C"))
+    (spring-violet-2  ,(if (true-color-p) "#9CABCA" "#717C7C"))
+    (spring-blue      ,(if (true-color-p) "#7FB4CA" "#717C7C"))
+    (light-blue       ,(if (true-color-p) "#A3D4D5" "#717C7C"))
+    ;; (spring-green     ,(if (true-color-p) "#98BB6C" "#717C7C"))
+    (spring-green     ,(if (true-color-p) "#a0da9c" "#717C7C"))
+    (boat-yellow-1    ,(if (true-color-p) "#938056" "#717C7C"))
+    ;; (boat-yellow-2    ,(if (true-color-p) "#C0A36E" "#717C7C"))
+    (boat-yellow-2    ,(if (true-color-p) "#ec03ed" "#717C7C"))
+    (light-yellow     ,(if (true-color-p) "#f9e2af" "#717C7C"))
+    (carp-yellow      ,(if (true-color-p) "#E6C384" "#717C7C"))
+    (sakura-pink      ,(if (true-color-p) "#D27E99" "#717C7C"))
+    (wave-red         ,(if (true-color-p) "#E46876" "#717C7C"))
+    (peach-red        ,(if (true-color-p) "#FF5D62" "#717C7C"))
+    (surimi-orange    ,(if (true-color-p) "#FFA066" "#717C7C"))
+    (katana-gray      ,(if (true-color-p) "#717C7C" "#717C7C"))
+    (comet            ,(if (true-color-p) "#54536D" "#4e4e4e")))))
 
   (defmacro define-emacs-solo-dark-theme (theme &rest faces)
     `(let ((class '((class color) (min-colors 89)))
            ,@emacs-solo-dark-palette)
        (cl-loop for (cvar . val) in emacs-solo-theme-custom-colors
-		do (set cvar val))
+        do (set cvar val))
        (custom-theme-set-faces ,theme ,@faces)))
 
   (define-emacs-solo-dark-theme
@@ -631,12 +685,11 @@ Available: https://github.com/meritamen/emacs-kanagawa-theme"
    `(term-color-cyan                               ((,class (:background ,spring-blue :foreground ,spring-blue))))
    `(term-color-bright-cyan                        ((,class (:background ,spring-blue :foreground ,spring-blue))))
    `(term-color-magenta                            ((,class (:background ,spring-violet-2 :foreground ,spring-violet-2))))
-   `(term-color-bright-magenta                     ((,class (:background ,spring-violet-2 :foreground ,spring-violet-2))))
-
+      `(term-color-bright-magenta                     ((,class (:background ,spring-violet-2 :foreground ,spring-violet-2))))
    `(ansi-color-green                              ((,class (:foreground ,spring-green))))
    `(ansi-color-black                              ((,class (:background ,sumi-ink-0))))
    `(ansi-color-cyan                               ((,class (:foreground ,wave-aqua-2))))
-   `(ansi-color-magenta                            ((,class (:foreground ,sakura-pink))))
+     `(ansi-color-magenta                            ((,class (:foreground ,sakura-pink))))
    `(ansi-color-blue                               ((,class (:foreground ,crystal-blue))))
    `(ansi-color-red                                ((,class (:foreground ,peach-red))))
    `(ansi-color-white                              ((,class (:foreground ,fuji-white))))
@@ -661,4 +714,3 @@ Available: https://github.com/meritamen/emacs-kanagawa-theme"
 
 (provide 'init)
 ;;; init.el ends here
-(put 'dired-find-alternate-file 'disabled nil)
