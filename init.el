@@ -642,7 +642,7 @@ Available: https://github.com/meritamen/emacs-kanagawa-theme"
    `(menu                                          ((,class (:background ,sumi-ink-0 :foreground ,fuji-white))))
    `(mode-line                                     ((,class (:background ,sumi-ink-0))))
    `(mode-line-inactive                            ((,class (:background unspecified :foreground ,fuji-white))))
-   `(mode-line-active                              ((,class (:background ,sumi-ink-0 :foreground ,fuji-white))))
+   `(mode-line-active                              ((,class (:background unspecified :foreground ,oni-violet))))
    `(mode-line-highlight                           ((,class (:foreground ,boat-yellow-2))))
    `(mode-line-buffer-id                           ((,class (:foreground ,wave-aqua-2 :weight bold))))
    `(numbers                                       ((,class (:background ,sakura-pink))))
@@ -684,7 +684,6 @@ Available: https://github.com/meritamen/emacs-kanagawa-theme"
    `(epa-mark                                      ((,class (:foreground ,wave-red))))
    `(dired-mark                                    ((,class (:foreground ,wave-red))))
    `(trailing-whitespace                           ((,class (:background ,comet))))
-   `(mode-line                                     ((,class (:background ,sumi-ink-0 :foreground ,fuji-white :weight bold))))
 
    ;; message colors
    `(message-header-name                           ((,class (:foreground ,sumi-ink-4))))
