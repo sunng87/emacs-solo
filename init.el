@@ -420,13 +420,18 @@
 
 ;;; EGLOT
 (use-package eglot
-  :hook (prog-mode . eglot-ensure)
   :custom
   (eglot-autoshutdown t)
   (eglot-events-buffer-size 0)
   (eglot-prefer-plaintext t)
   :init
-  ;; (setq eglot-stay-out-of '(flymake))
+  (defun emacs-solo/eglot-setup ()
+    "Setup eglot mode with specific exclusions."
+    (unless (eq major-mode 'emacs-lisp-mode)
+      (eglot-ensure)))
+
+  (add-hook 'prog-mode-hook #'emacs-solo/eglot-setup)
+
   :bind (:map
          eglot-mode-map
          ("C-c l a" . eglot-code-actions)
