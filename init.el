@@ -40,12 +40,32 @@
   (tab-width 4)
   (use-dialog-box nil)
   :config
-  (set-face-attribute 'default nil :family "Hack" :height 100)
 
+  ;; Configure fonts per OS
+  (set-face-attribute 'default nil :family "Hack" :height 100)
   (when (eq system-type 'darwin)
     (setq insert-directory-program "gls")
     (setq mac-command-modifier 'meta)
     (set-face-attribute 'default nil :family "Hack" :height 130))
+
+  ;; Configure the Modus Themes' appearance
+  (setq modus-themes-mode-line '(accented borderless)
+        modus-themes-bold-constructs t
+        modus-themes-italic-constructs t
+        modus-themes-fringes 'subtle
+        modus-themes-tabs-accented t
+        modus-themes-paren-match '(bold intentse)
+        modus-themes-prompts '(bold intense)
+        modus-themes-org-blocks 'tinted-background
+        modus-themes-scale-headings t
+        modus-themes-region '(bg-only)
+        modus-themes-headings
+        '((1 . (rainbown overline background 1.4))
+          (2 . (rainbown background 1.3))
+          (3 . (rainbown bold 1.2))
+          (4 . (semilight 1.1))
+          ))
+  (load-theme 'modus-vivendi t)
 
   (global-set-key (kbd "C-c p") (lambda ()
                   (interactive)
@@ -67,6 +87,11 @@
                     (goto-char (window-start))
                     (forward-line midpoint)
                     (recenter midpoint)))))
+
+  (defun emacs-solo/prefer-tabs ()
+    "Disables indent-tabs-mode, and prefer spaces over tabs."
+    (interactive)
+    (indent-tabs-mode -1))
 
   (defun emacs-solo/set-exec-path-from-shell-PATH ()
     "Set up Emacs' `exec-path' and PATH environment the same as user Shell."
@@ -185,11 +210,13 @@
     "Greedly remove all git gutter marks and other overlays."
     (interactive)
     (remove-overlays)
+    (remove-hook 'pre-command-hook #'emacs-solo/git-gutter-add-mark)
     (remove-hook 'after-save-hook #'emacs-solo/git-gutter-add-mark))
-  
+
   (defun emacs-solo/git-gutter-on ()
     (interactive)
     (emacs-solo/git-gutter-add-mark)
+    (add-hook 'pre-command-hook #'emacs-solo/git-gutter-add-mark)
     (add-hook 'after-save-hook #'emacs-solo/git-gutter-add-mark))
 
   (global-set-key (kbd "M-9") 'emacs-solo/goto-previous-hunk)
@@ -198,10 +225,11 @@
   (global-set-key (kbd "C-c g r") 'emacs-solo/git-gutter-off)
   (global-set-key (kbd "C-c g g") 'emacs-solo/git-gutter-on)
   (global-set-key (kbd "C-c g n") 'emacs-solo/goto-next-hunk)
-  
 
   (emacs-solo/set-exec-path-from-shell-PATH)
   (add-hook 'emacs-lisp-mode-hook #'emacs-solo/elisp-mode-hook)
+  (add-hook 'prog-mode-hook #'display-line-numbers-mode)
+  (add-hook 'prog-mode-hook #'emacs-solo/prefer-tabs)
 
   ;; Save manual customizations to other file than init.el
   (setq custom-file (locate-user-emacs-file "custom-vars.el"))
@@ -209,16 +237,15 @@
 
   ;; Disabled in favor of icomplete
   ;; (add-hook 'completion-list-mode-hook #'emacs-solo/jump-to-completions)
-  
+
   :init
   (tool-bar-mode -1)
   (menu-bar-mode -1)
   (when scroll-bar-mode
     (scroll-bar-mode -1))
 
-  (global-display-line-numbers-mode 1)
   (global-auto-revert-mode 1)
-  (indent-tabs-mode nil)
+  (indent-tabs-mode -1)
   (recentf-mode 1)
   (savehist-mode 1)
   (save-place-mode 1)
@@ -242,7 +269,7 @@
 "
   (emacs-init-time)
   (number-to-string (length package-activated-list)))))
-  
+
   (message (emacs-init-time)))
 
 ;;; WINDOW
@@ -264,9 +291,7 @@
       (display-buffer-in-side-window)
       (window-height . 0.25)
       (side . bottom)
-      (slot . 1)))
-   
-   ))
+      (slot . 1)))))
 
 ;;; ERC
 (use-package erc
@@ -299,6 +324,28 @@
   (setq completion-auto-help nil)
   (fido-mode -1)
   (icomplete-mode 1))
+
+
+;; TODO: study this on https://lists.gnu.org/archive/html/emacs-devel/2020-09/msg00876.html
+;;       it looks like we can make a way of completing in column position when in vertical
+;;        in buffer
+;; (defun icomplete-vertical-reformat-completions (completions)
+;;   (save-match-data
+;;     (let ((cnp (substring-no-properties completions)))
+;;       (if (string-match "^\\((.*)\\|\\[.+\\]\\)?{\\(\\(?:.\\|\n\\)+\\)}" cnp)
+;;           (format "%s \n%s"
+;;                   (or (match-string 1 cnp) "")
+;;                   (replace-regexp-in-string "^" (make-string (current-column) ? 
+;;  ) (match-string 2 cnp)))
+;;         cnp))))
+;; (defun icomplete-vertical-adjust-minibuffer-height (completions)
+;;   (let* ((comp (icomplete-vertical-reformat-completions completions))
+;;          (complen (length (split-string comp "\n"))))
+;;     (if (> complen 1) (enlarge-window (- icomplete-prospects-height (1- 
+;; (window-height)))))
+;;     comp))
+;; (advice-add 'icomplete-completions :filter-return 
+;; #'icomplete-vertical-adjust-minibuffer-height)
 
 
 ;;; DIRED
@@ -515,275 +562,6 @@
   :config
   (add-to-list 'major-mode-remap-alist '(markdown-mode . markdown-ts-mode))
   (add-to-list 'treesit-language-source-alist '(markdown "https://github.com/ikatyang/tree-sitter-markdown" "master" "src")))
-
-;;; EMACS-SOLO-THEME
-(defun apply-emacs-solo-theme ()
-  "Theme heavily inspired by Kanagawa Theme.
-Available: https://github.com/meritamen/emacs-kanagawa-theme"
-  (interactive)
-  (defgroup emacs-solo-theme nil
-    "Emacs-Solo-theme options."
-    :group 'faces)
-
-  (defcustom emacs-solo-theme-comment-italic t
-    "Enable italics for comments and also disable background."
-    :type 'boolean
-    :group 'emacs-solo-theme)
-
-  (defcustom emacs-solo-theme-keyword-italic t
-    "Enable italics for keywords."
-    :type 'boolean
-    :group 'emacs-solo-theme)
-
-  (defcustom emacs-solo-theme-org-height t
-    "Use varying text heights for org headings."
-    :type 'boolean
-    :group 'emacs-solo-theme)
-
-  (defcustom emacs-solo-theme-org-bold t
-    "Inherit text bold for org headings"
-    :type 'boolean
-    :group 'emacs-solo-theme)
-
-  (defcustom emacs-solo-theme-org-priority-bold t
-    "Inherit text bold for priority items in agenda view"
-    :type 'boolean
-    :group 'emacs-solo-theme)
-
-  (defcustom emacs-solo-theme-org-highlight nil
-    "Highlight org headings."
-    :type 'boolean
-    :group 'emacs-solo-theme)
-
-  (defcustom emacs-solo-theme-underline-parens t
-    "If non-nil, underline matching parens when using `show-paren-mode' or similar."
-    :type 'boolean
-    :group 'emacs-solo-theme)
-
-  (defcustom emacs-solo-theme-custom-colors nil
-    "Specify a list of custom colors."
-    :type 'alist
-    :group 'emacs-solo-theme)
-
-  (defun true-color-p ()
-    (or (display-graphic-p)
-    (= (tty-display-color-cells) 16777216)))
-
-  (deftheme emacs-solo "An elegant theme inspired by The Great Wave off Emacs-Solo by Katsushika Hokusa")
-
-  (eval
-    (defvar emacs-solo-dark-palette
-      `(
-    ;; (fuji-white       ,(if (true-color-p) "#DCD7BA" "#ffffff"))
-    (fuji-white       ,(if (true-color-p) "#ffffff" "#ffffff"))
-    (old-white        ,(if (true-color-p) "#C8C093" "#ffffff"))
-    (sumi-ink-0       ,(if (true-color-p) "#16161D" "#000000"))
-    ;; (sumi-ink-1b      ,(if (true-color-p) "#1f1f28" "#000000"))
-    (sumi-ink-1b      ,(if (true-color-p) "#1e1e2e" "#000000"))
-    (sumi-ink-1       ,(if (true-color-p) "#1F1F28" "#080808"))
-    (sumi-ink-2       ,(if (true-color-p) "#2A2A37" "#121212"))
-    (sumi-ink-3       ,(if (true-color-p) "#363646" "#303030"))
-    (sumi-ink-4       ,(if (true-color-p) "#54546D" "#303030"))
-    (wave-blue-1      ,(if (true-color-p) "#223249" "#4e4e4e"))
-    (wave-blue-2      ,(if (true-color-p) "#2D4F67" "#585858"))
-    (wave-aqua-1      ,(if (true-color-p) "#6A9589" "#6a9589"))
-    (wave-aqua-2      ,(if (true-color-p) "#7AA89F" "#717C7C"))
-    (winter-green     ,(if (true-color-p) "#2B3328" "#585858"))
-    (winter-yellow    ,(if (true-color-p) "#49443C" "#585858"))
-    (winter-red       ,(if (true-color-p) "#43242B" "#585858"))
-    (winter-blue      ,(if (true-color-p) "#252535" "#585858"))
-    (autumn-green     ,(if (true-color-p) "#76946A" "#585858"))
-    (autumn-red       ,(if (true-color-p) "#C34043" "#585858"))
-    (autumn-yellow    ,(if (true-color-p) "#DCA561" "#585858"))
-    (samurai-red      ,(if (true-color-p) "#E82424" "#585858"))
-    (ronin-yellow     ,(if (true-color-p) "#FF9E3B" "#585858"))
-    (dragon-blue      ,(if (true-color-p) "#658594" "#658594"))
-    ;; (fuji-gray        ,(if (true-color-p) "#727169" "#717C7C"))
-    (fuji-gray        ,(if (true-color-p) "#6c7086" "#717C7C"))
-    (spring-violet-1  ,(if (true-color-p) "#938AA9" "#717C7C"))
-    (oni-violet       ,(if (true-color-p) "#957FB8" "#717C7C"))
-    (crystal-blue     ,(if (true-color-p) "#7E9CD8" "#717C7C"))
-    (spring-violet-2  ,(if (true-color-p) "#9CABCA" "#717C7C"))
-    (spring-blue      ,(if (true-color-p) "#7FB4CA" "#717C7C"))
-    (light-blue       ,(if (true-color-p) "#A3D4D5" "#717C7C"))
-    ;; (spring-green     ,(if (true-color-p) "#98BB6C" "#717C7C"))
-    (spring-green     ,(if (true-color-p) "#a0da9c" "#717C7C"))
-    (boat-yellow-1    ,(if (true-color-p) "#938056" "#717C7C"))
-    ;; (boat-yellow-2    ,(if (true-color-p) "#C0A36E" "#717C7C"))
-    (boat-yellow-2    ,(if (true-color-p) "#ec03ed" "#717C7C"))
-    (light-yellow     ,(if (true-color-p) "#f9e2af" "#717C7C"))
-    (carp-yellow      ,(if (true-color-p) "#E6C384" "#717C7C"))
-    (sakura-pink      ,(if (true-color-p) "#D27E99" "#717C7C"))
-    (wave-red         ,(if (true-color-p) "#E46876" "#717C7C"))
-    (peach-red        ,(if (true-color-p) "#FF5D62" "#717C7C"))
-    (surimi-orange    ,(if (true-color-p) "#FFA066" "#717C7C"))
-    (katana-gray      ,(if (true-color-p) "#717C7C" "#717C7C"))
-    (comet            ,(if (true-color-p) "#54536D" "#4e4e4e")))))
-
-  (defmacro define-emacs-solo-dark-theme (theme &rest faces)
-    `(let ((class '((class color) (min-colors 89)))
-           ,@emacs-solo-dark-palette)
-       (cl-loop for (cvar . val) in emacs-solo-theme-custom-colors
-        do (set cvar val))
-       (custom-theme-set-faces ,theme ,@faces)))
-
-  (define-emacs-solo-dark-theme
-   'emacs-solo
-   ;; Customize faces
-   `(default                                       ((,class (:background ,sumi-ink-1b :foreground ,fuji-white))))
-   `(border                                        ((,class (:background ,sumi-ink-1b :foreground ,sumi-ink-0))))
-   `(button                                        ((,class (:foreground ,wave-aqua-2))))
-   `(child-frame                                   ((,class (:background ,sumi-ink-0 :foreground ,sumi-ink-0))))
-   `(child-frame-border                            ((,class (:background ,sumi-ink-0 :foreground ,sumi-ink-0))))
-   `(cursor                                        ((,class (:background ,light-blue :foreground ,sumi-ink-0 :weight bold))))
-   `(error                                         ((,class (:foreground ,samurai-red))))
-   `(fringe                                        ((,class (:foreground ,sumi-ink-3))))
-   `(glyph-face                                    ((,class (:background ,sumi-ink-4))))
-   `(glyphless-char                                ((,class (:foreground ,sumi-ink-4))))
-   `(header-line                                   ((,class (:background ,sumi-ink-0))))
-   `(highlight                                     ((,class (:background ,comet :foreground ,spring-violet-1))))
-   `(hl-line                                       ((,class (:background ,sumi-ink-2))))
-   `(homoglyph                                     ((,class (:foreground ,light-blue))))
-   `(internal-border                               ((,class (:background ,sumi-ink-1b))))
-   `(line-number                                   ((,class (:foreground ,sumi-ink-4))))
-   `(line-number-current-line                      ((,class (:foreground ,spring-violet-2 :background ,sumi-ink-2 :weight bold))))
-   `(lv-separator                                  ((,class (:foreground ,wave-blue-2 :background ,sumi-ink-2))))
-   `(match                                         ((,class (:background ,carp-yellow :foreground ,sumi-ink-0))))
-   `(menu                                          ((,class (:background ,sumi-ink-0 :foreground ,fuji-white))))
-   `(mode-line                                     ((,class (:background ,sumi-ink-0))))
-   `(mode-line-inactive                            ((,class (:background unspecified :foreground ,fuji-white))))
-   `(mode-line-active                              ((,class (:background unspecified :foreground ,oni-violet))))
-   `(mode-line-highlight                           ((,class (:foreground ,boat-yellow-2))))
-   `(mode-line-buffer-id                           ((,class (:foreground ,wave-aqua-2 :weight bold))))
-   `(numbers                                       ((,class (:background ,sakura-pink))))
-   `(region                                        ((,class (:background ,wave-blue-2))))
-   `(separator-line                                ((,class (:background ,sumi-ink-0))))
-   `(shadow                                        ((,class (:background ,sumi-ink-0))))
-   `(success                                       ((,class (:foreground ,wave-aqua-2))))
-   `(vertical-border                               ((,class (:foreground ,sumi-ink-4))))
-   `(warning                                       ((,class (:foreground ,ronin-yellow))))
-   `(window-border                                 ((,class (:background ,sumi-ink-1b))))
-   `(window-divider                                ((,class (:foreground ,sumi-ink-2))))
-   `(hi-yellow                                     ((,class (:background ,carp-yellow :foreground ,sumi-ink-1b))))
-
-   ;; Tabs
-   `(tab-bar                                       ((,class (:background ,sumi-ink-1b))))
-   `(tab-bar-tab-inactive                          ((,class (:foreground ,sumi-ink-4 :background ,sumi-ink-1b))))
-   
-   ;; Font lock
-   `(font-lock-type-face                           ((,class (:foreground ,light-yellow))))
-   `(font-lock-regexp-grouping-backslash           ((,class (:foreground ,boat-yellow-2))))
-   `(font-lock-keyword-face                        ((,class (:foreground ,oni-violet :weight semi-bold :slant ,(if emacs-solo-theme-keyword-italic 'italic 'normal)))))
-   `(font-lock-warning-face                        ((,class (:foreground ,ronin-yellow))))
-   `(font-lock-string-face                         ((,class (:foreground ,spring-green :slant italic))))
-   `(font-lock-builtin-face                        ((,class (:foreground ,spring-blue))))
-   `(font-lock-reference-face                      ((,class (:foreground ,peach-red))))
-   `(font-lock-constant-face                       ((,class (:foreground ,carp-yellow))))
-   `(font-lock-function-name-face                  ((,class (:foreground ,crystal-blue))))
-   `(font-lock-variable-name-face                  ((,class (:foreground ,wave-red))))
-   `(font-lock-negation-char-face                  ((,class (:foreground ,peach-red))))
-   `(font-lock-comment-face                        ((,class (:foreground ,fuji-gray :slant ,(if emacs-solo-theme-keyword-italic 'italic 'normal)))))
-   `(font-lock-comment-delimiter-face              ((,class (:foreground ,fuji-gray :slant ,(if emacs-solo-theme-keyword-italic 'italic 'normal)))))
-   `(font-lock-doc-face                            ((,class (:foreground ,comet))))
-   `(font-lock-doc-markup-face                     ((,class (:foreground ,comet))))
-   `(font-lock-preprocessor-face                   ((,class (:foreground ,light-yellow))))
-   `(elisp-shorthand-font-lock-face                ((,class (:foreground ,fuji-white))))
-   `(info-xref                                     ((,class (:foreground ,carp-yellow))))
-   `(minibuffer-prompt-end                         ((,class (:foreground ,autumn-red :background ,winter-red))))
-   `(minibuffer-prompt                             ((,class (:foreground ,carp-yellow))))
-   `(epa-mark                                      ((,class (:foreground ,wave-red))))
-   `(dired-mark                                    ((,class (:foreground ,wave-red))))
-   `(trailing-whitespace                           ((,class (:background ,comet))))
-
-   ;; message colors
-   `(message-header-name                           ((,class (:foreground ,sumi-ink-4))))
-   `(message-header-other                          ((,class (:foreground ,surimi-orange))))
-   `(message-header-subject                        ((,class (:foreground ,carp-yellow))))
-   `(message-header-to                             ((,class (:foreground ,old-white))))
-   `(message-header-cc                             ((,class (:foreground ,wave-aqua-2))))
-   `(message-header-xheader                        ((,class (:foreground ,old-white))))
-   `(custom-link                                   ((,class (:foreground ,crystal-blue))))
-   `(link                                          ((,class (:foreground ,crystal-blue))))
-
-   ;; org-mode
-   `(org-done                                      ((,class (:foreground ,dragon-blue))))
-   `(org-code                                      ((,class (:background ,sumi-ink-0))))
-   `(org-meta-line                                 ((,class (:background ,winter-green :foreground ,spring-green))))
-   `(org-block                                     ((,class (:background ,sumi-ink-0 :foreground ,sumi-ink-4))))
-   `(org-block-begin-line                          ((,class (:background ,winter-blue :foreground ,spring-blue))))
-   `(org-block-end-line                            ((,class (:background ,winter-red :foreground ,peach-red))))
-   `(org-headline-done                             ((,class (:foreground ,dragon-blue :strike-through t))))
-   `(org-todo                                      ((,class (:foreground ,surimi-orange :weight bold))))
-   `(org-headline-todo                             ((,class (:foreground ,sumi-ink-2))))
-   `(org-upcoming-deadline                         ((,class (:foreground ,peach-red))))
-   `(org-footnote                                  ((,class (:foreground ,wave-aqua-2))))
-   `(org-indent                                    ((,class (:background ,sumi-ink-1b :foreground ,sumi-ink-1b))))
-   `(org-hide                                      ((,class (:background ,sumi-ink-1b :foreground ,sumi-ink-1b))))
-   `(org-date                                      ((,class (:foreground ,wave-blue-2))))
-   `(org-ellipsis                                  ((,class (:foreground ,wave-blue-2 :weight bold))))
-   `(org-level-1                                   ((,class (:inherit bold :foreground ,peach-red :height ,(if emacs-solo-theme-org-height 1.3 1.0) :weight ,(if emacs-solo-theme-org-bold 'unspecified 'normal)))))
-   `(org-level-2                                   ((,class (:inherit bold :foreground ,spring-violet-2 :height ,(if emacs-solo-theme-org-height 1.2 1.0) :weight ,(if emacs-solo-theme-org-bold 'unspecified 'normal)))))
-   `(org-level-3                                   ((,class (:foreground ,boat-yellow-2 :height ,(if emacs-solo-theme-org-height 1.1 1.0)))))
-   `(org-level-4                                   ((,class (:foreground ,fuji-white))))
-   `(org-level-5                                   ((,class (:foreground ,fuji-white))))
-   `(org-level-6                                   ((,class (:foreground ,carp-yellow))))
-   `(org-level-7                                   ((,class (:foreground ,surimi-orange))))
-   `(org-level-8                                   ((,class (:foreground ,spring-green))))
-   `(org-priority                                  ((,class (:foreground ,peach-red :inherit bold :weight ,(if emacs-solo-theme-org-priority-bold 'unspecified 'normal)))))
-
-   `(info-header-xref                              ((,class (:foreground ,carp-yellow))))
-   `(xref-file-header                              ((,class (:foreground ,carp-yellow))))
-   `(xref-match                                    ((,class (:foreground ,carp-yellow))))
-
-   ;; show-paren
-   `(show-paren-match                              ((,class (:background ,wave-aqua-1 :foreground ,sumi-ink-0 :weight bold :underline ,(when emacs-solo-theme-underline-parens t)))))
-   `(show-paren-match-expression                   ((,class (:background ,wave-aqua-1 :foreground ,sumi-ink-0 :weight bold))))
-   `(show-paren-mismatch                           ((,class (:background ,peach-red :foreground ,old-white :underline ,(when emacs-solo-theme-underline-parens t)))))
-   `(tooltip                                       ((,class (:foreground ,sumi-ink-0 :background ,carp-yellow :weight bold))))
-
-   ;; term
-   `(term                                          ((,class (:background ,sumi-ink-0 :foreground ,fuji-white))))
-   `(term-color-blue                               ((,class (:background ,crystal-blue :foreground ,crystal-blue))))
-   `(term-color-bright-blue                        ((,class (:inherit term-color-blue))))
-   `(term-color-green                              ((,class (:background ,wave-aqua-2 :foreground ,wave-aqua-2))))
-   `(term-color-bright-green                       ((,class (:inherit term-color-green))))
-   `(term-color-black                              ((,class (:background ,sumi-ink-0 :foreground ,fuji-white))))
-   `(term-color-bright-black                       ((,class (:background ,sumi-ink-1b :foreground ,sumi-ink-1b))))
-   `(term-color-white                              ((,class (:background ,fuji-white :foreground ,fuji-white))))
-   `(term-color-bright-white                       ((,class (:background ,old-white :foreground ,old-white))))
-   `(term-color-red                                ((,class (:background ,peach-red :foreground ,peach-red))))
-   `(term-color-bright-red                         ((,class (:background ,spring-green :foreground ,spring-green))))
-   `(term-color-yellow                             ((,class (:background ,carp-yellow :foreground ,carp-yellow))))
-   `(term-color-bright-yellow                      ((,class (:background ,carp-yellow :foreground ,carp-yellow))))
-   `(term-color-cyan                               ((,class (:background ,spring-blue :foreground ,spring-blue))))
-   `(term-color-bright-cyan                        ((,class (:background ,spring-blue :foreground ,spring-blue))))
-   `(term-color-magenta                            ((,class (:background ,spring-violet-2 :foreground ,spring-violet-2))))
-      `(term-color-bright-magenta                     ((,class (:background ,spring-violet-2 :foreground ,spring-violet-2))))
-   `(ansi-color-green                              ((,class (:foreground ,spring-green))))
-   `(ansi-color-black                              ((,class (:background ,sumi-ink-0))))
-   `(ansi-color-cyan                               ((,class (:foreground ,wave-aqua-2))))
-     `(ansi-color-magenta                            ((,class (:foreground ,sakura-pink))))
-   `(ansi-color-blue                               ((,class (:foreground ,crystal-blue))))
-   `(ansi-color-red                                ((,class (:foreground ,peach-red))))
-   `(ansi-color-white                              ((,class (:foreground ,fuji-white))))
-   `(ansi-color-yellow                             ((,class (:foreground ,autumn-yellow))))
-   `(ansi-color-bright-white                       ((,class (:foreground ,old-white))))
-   `(ansi-color-bright-white                       ((,class (:foreground ,old-white))))
-
-   ;; eglot
-   `(eglot-inlay-hint-face      ((,class (:foreground ,fuji-gray :background ,sumi-ink-1b :height 0.8))))
-
-   `(focus-unfocused                               ((,class (:foreground ,sumi-ink-4)))))
-
-  (provide-theme 'emacs-solo)
-  
-  (defun emacs-solo-theme ()
-    "Set emacs-solo theme"
-    (interactive)
-    (enable-theme 'emacs-solo))
-  (emacs-solo-theme))
-
-(apply-emacs-solo-theme)
 
 (provide 'init)
 ;;; init.el ends here
