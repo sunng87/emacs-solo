@@ -25,6 +25,8 @@
      (".*" "xdg-open")))
   (dired-kill-when-opening-new-dired-buffer t)
   (dired-listing-switches "-al --group-directories-first")
+  (global-auto-revert-non-file-buffers t)
+  (history-length 25)
   (inhibit-startup-message t)
   (initial-scratch-message "")
   (ispell-dictionary "en_US")
@@ -36,7 +38,7 @@
   (treesit-font-lock-level 4)
   (truncate-lines t)
   (tab-width 4)
-  (indent-tabs-mode nil)
+  (use-dialog-box nil)
   :config
   (set-face-attribute 'default nil :family "Hack" :height 100)
 
@@ -146,7 +148,7 @@
             (let ((num (string-to-number (match-string 1 line)))
                   (count (string-to-number (match-string 2 line))))
               (if (= count 0)
-                  (add-to-list 'result (cons num "deleted"))
+                  (add-to-list 'result (cons (+ 1 num) "deleted"))
                 (dotimes (i count)
                   (add-to-list 'result (cons (+ num i) "added"))))))
         (if (string-match "\\(^[0-9]+\\)$" line)
@@ -198,24 +200,32 @@
   (global-set-key (kbd "C-c g n") 'emacs-solo/goto-next-hunk)
   
 
-  ;; initialize customizations
   (emacs-solo/set-exec-path-from-shell-PATH)
   (add-hook 'emacs-lisp-mode-hook #'emacs-solo/elisp-mode-hook)
+
+  ;; Save manual customizations to other file than init.el
+  (setq custom-file (locate-user-emacs-file "custom-vars.el"))
+  (load custom-file 'noerror 'nomessage)
 
   ;; Disabled in favor of icomplete
   ;; (add-hook 'completion-list-mode-hook #'emacs-solo/jump-to-completions)
   
   :init
-  (when scroll-bar-mode
-    (scroll-bar-mode -1))
   (tool-bar-mode -1)
   (menu-bar-mode -1)
+  (when scroll-bar-mode
+    (scroll-bar-mode -1))
+
+  (global-display-line-numbers-mode 1)
+  (global-auto-revert-mode 1)
+  (indent-tabs-mode nil)
+  (recentf-mode 1)
+  (savehist-mode 1)
+  (save-place-mode 1)
   (winner-mode)
   (xterm-mouse-mode 1)
   (fido-vertical-mode)
   (file-name-shadow-mode 1)
-  (add-hook 'prog-mode-hook 'display-line-numbers-mode)
-  
 
   (with-current-buffer (get-buffer-create "*scratch*")
     (insert (format ";;
