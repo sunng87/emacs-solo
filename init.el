@@ -56,6 +56,8 @@
         modus-themes-tabs-accented t
         modus-themes-paren-match '(bold intentse)
         modus-themes-prompts '(bold intense)
+        ;; modus-themes-syntax '(faint alt-syntax green-strings yellow-comments) ;; all options
+        modus-themes-syntax '(alt-syntax green-strings yellow-comments)
         modus-themes-org-blocks 'tinted-background
         modus-themes-scale-headings t
         modus-themes-region '(bg-only)
@@ -297,6 +299,8 @@
 (use-package erc
   :defer t
   :custom
+  (erc-join-buffer 'window)
+  ;; (erc-interactive-display ...) ;; this option will be available on next ERC release (5.6)
   (erc-hide-list '("JOIN" "PART" "QUIT"))
   (erc-timestamp-format "[%H:%M]")
   (erc-autojoin-channels-alist '((".*\\.libera\\.chat" "#emacs"))))
@@ -393,6 +397,7 @@
 (use-package eshell
   :after (:all emacs)
   :config
+  (require 'vc)
   (add-hook 'eshell-mode-hook
         (lambda ()
               (local-set-key (kbd "C-l")
