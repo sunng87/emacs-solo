@@ -34,6 +34,7 @@
   (pixel-scroll-precision-mode t)
   (pixel-scroll-precision-use-momentum nil)
   (ring-bell-function 'ignore)
+  (shr-use-colors nil)
   (switch-to-buffer-obey-display-actions t)
   (treesit-font-lock-level 4)
   (truncate-lines t)
@@ -329,29 +330,6 @@
   (fido-mode -1)
   (icomplete-mode 1))
 
-
-;; TODO: study this on https://lists.gnu.org/archive/html/emacs-devel/2020-09/msg00876.html
-;;       it looks like we can make a way of completing in column position when in vertical
-;;        in buffer
-;; (defun icomplete-vertical-reformat-completions (completions)
-;;   (save-match-data
-;;     (let ((cnp (substring-no-properties completions)))
-;;       (if (string-match "^\\((.*)\\|\\[.+\\]\\)?{\\(\\(?:.\\|\n\\)+\\)}" cnp)
-;;           (format "%s \n%s"
-;;                   (or (match-string 1 cnp) "")
-;;                   (replace-regexp-in-string "^" (make-string (current-column) ? 
-;;  ) (match-string 2 cnp)))
-;;         cnp))))
-;; (defun icomplete-vertical-adjust-minibuffer-height (completions)
-;;   (let* ((comp (icomplete-vertical-reformat-completions completions))
-;;          (complen (length (split-string comp "\n"))))
-;;     (if (> complen 1) (enlarge-window (- icomplete-prospects-height (1- 
-;; (window-height)))))
-;;     comp))
-;; (advice-add 'icomplete-completions :filter-return 
-;; #'icomplete-vertical-adjust-minibuffer-height)
-
-
 ;;; DIRED
 (use-package dired
   :bind
@@ -371,7 +349,7 @@
       (display-buffer-in-side-window
        dir `((side . left)
          (slot . 0)
-         (window-width . 0.2)
+         (window-width . 30)
          (window-parameters . ((no-other-window . t)
                    (no-delete-other-windows . t)
                    (mode-line-format . (" "
@@ -520,14 +498,14 @@
   (ruby-indent-tabs-mode nil))
 
 ;;; JS-TS-MODE
-(use-package js-base-mode
-  :defer 't
+(use-package js-ts-mode
   :ensure js ;; I care about js-base-mode but it is locked behind the feature "js"
+  :mode "\\.jsx?\\'"    
+  :defer 't
   :custom
   (js-indent-level 2)
   :config
-  (add-to-list 'treesit-language-source-alist '(javascript "https://github.com/tree-sitter/tree-sitter-javascript" "master" "src"))
-  (unbind-key "M-." js-base-mode-map))
+  (add-to-list 'treesit-language-source-alist '(javascript "https://github.com/tree-sitter/tree-sitter-javascript" "master" "src")))
 
 ;;; TYPESCRIPT-TS-MODE
 (use-package typescript-ts-mode
