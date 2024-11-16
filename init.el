@@ -586,5 +586,5 @@
   (add-to-list 'treesit-language-source-alist '(markdown-inline "https://github.com/tree-sitter-grammars/tree-sitter-markdown" "split_parser" "tree-sitter-markdown-inline/src")))
 
 (provide 'init)
-;; init.el ends here
+;;; init.el ends here
 
