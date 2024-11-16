@@ -52,26 +52,8 @@
     (setq mac-command-modifier 'meta)
     (set-face-attribute 'default nil :family "Hack" :height 130))
 
-  ;; Configure the Modus Themes' appearance
-  (setq modus-themes-mode-line '(accented borderless)
-        modus-themes-bold-constructs t
-        modus-themes-italic-constructs t
-        modus-themes-fringes 'subtle
-        modus-themes-tabs-accented t
-        modus-themes-paren-match '(bold intentse)
-        modus-themes-prompts '(bold intense)
-        ;; modus-themes-syntax '(faint alt-syntax green-strings yellow-comments) ;; all options
-        modus-themes-syntax '(alt-syntax green-strings yellow-comments)
-        modus-themes-org-blocks 'tinted-background
-        modus-themes-scale-headings t
-        modus-themes-region '(bg-only)
-        modus-themes-headings
-        '((1 . (rainbown overline background 1.4))
-          (2 . (rainbown background 1.3))
-          (3 . (rainbown bold 1.2))
-          (4 . (semilight 1.1))
-          ))
-  (load-theme 'modus-vivendi t)
+
+  (load-theme 'modus-vivendi-tinted t)
 
   (global-set-key (kbd "C-c p") (lambda ()
                   (interactive)
