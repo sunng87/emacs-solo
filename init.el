@@ -15,6 +15,8 @@
   :custom
   (column-number-mode t)
   (completions-format 'one-column)
+  (completions-detailed t)
+  (completion-ignore-case t)
   (create-lockfiles nil)
   (delete-by-moving-to-trash t)
   (delete-selection-mode 1)
@@ -38,6 +40,7 @@
   (switch-to-buffer-obey-display-actions t)
   (treesit-font-lock-level 4)
   (truncate-lines t)
+  (tab-always-indent 'complete)
   (tab-width 4)
   (use-dialog-box nil)
   :config
