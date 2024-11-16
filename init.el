@@ -382,11 +382,32 @@
   '(progn
      (define-key dired-mode-map (kbd "G") 'emacs-solo/window-dired-open-directory))))
   
-
 ;;; ESHELL
 (use-package eshell
-  :after (:all emacs)
+  :ensure nil
+  :defer t
   :config
+
+  (defun eshell/cat-with-syntax-highlighting (filename)
+    "Like cat(1) but with syntax highlighting.
+  Stole from aweshell"
+    (let ((existing-buffer (get-file-buffer filename))
+          (buffer (find-file-noselect filename)))
+      (eshell-print
+       (with-current-buffer buffer
+         (if (fboundp 'font-lock-ensure)
+             (font-lock-ensure)
+           (with-no-warnings
+             (font-lock-fontify-buffer)))
+         (let ((contents (buffer-string)))
+           (remove-text-properties 0 (length contents) '(read-only nil) contents)
+           contents)))
+      (unless existing-buffer
+        (kill-buffer buffer))
+      nil))
+  (advice-add 'eshell/cat :override #'eshell/cat-with-syntax-highlighting)
+  
+  
   (require 'vc)
   (add-hook 'eshell-mode-hook
         (lambda ()
@@ -402,20 +423,20 @@
           (concat
            "┌─("
        (if (> eshell-last-command-status 0)
-           "⛒"
+           "❌"
          "✓")
        " "
        (number-to-string eshell-last-command-status)
            ")──("
-       "Ꜫ"
+       "🧘"
        " "
        (user-login-name)
            ")──("
-       "⏲"
+       "🕝"
        " "
            (format-time-string "%H:%M:%S" (current-time))
            ")──("
-       "🗁"
+       "📁"
        " "
            (concat (if (>= (length (eshell/pwd)) 40)
                (concat "..." (car (last (butlast (split-string (eshell/pwd) "/") 0))))
@@ -431,6 +452,7 @@
         ))
            "└─➜ ")))
 
+  
   (setq eshell-prompt-regexp "└─➜ ")
 
   (add-hook 'eshell-mode-hook (lambda () (setenv "TERM" "xterm-256color")))
@@ -493,11 +515,15 @@
 
 ;;; FLYMAKE
 (use-package flymake
+  :ensure nil
+  :defer t
   :hook (prog-mode . flymake-mode)
   :bind (:map flymake-mode-map
               ("C-c ! n" . flymake-goto-next-error)
               ("C-c ! p" . flymake-goto-prev-error)
-              ("C-c ! l" . flymake-show-buffer-diagnostics)))
+              ("C-c ! l" . flymake-show-buffer-diagnostics))
+  :custom
+  (flymake-show-diagnostics-at-end-of-line t))
 
 ;;; RUBY-TS-MODE
 (use-package ruby-ts-mode
@@ -512,7 +538,7 @@
 ;;; JS-TS-MODE
 (use-package js-ts-mode
   :ensure js ;; I care about js-base-mode but it is locked behind the feature "js"
-  :mode "\\.jsx?\\'"    
+  :mode "\\.jsx?\\'"
   :defer 't
   :custom
   (js-indent-level 2)
@@ -561,3 +587,4 @@
 
 (provide 'init)
 ;;; init.el ends here
+
