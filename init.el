@@ -324,6 +324,10 @@
      ("C-v" . icomplete-vertical-toggle)
      ("RET" . icomplete-force-complete-and-exit)
      ))
+  :hook
+  (after-init . (lambda ()
+                  (fido-mode -1)
+                  (icomplete-vertical-mode 1)))
   :config
   (setq icomplete-delay-completions-threshold 0)
   (setq icomplete-compute-delay 0)
@@ -334,12 +338,12 @@
   (setq icomplete-with-completion-tables t)
   (setq icomplete-in-buffer t)
   (setq icomplete-max-delay-chars 0)
-  (setq completion-auto-help nil)
-  (fido-mode -1)
-  (icomplete-mode 1))
+  (advice-add 'completion-at-point
+              :after #'minibuffer-hide-completions))
 
 ;;; DIRED
 (use-package dired
+  :ensure nil
   :bind
   (("M-i" . emacs-solo/window-dired-vc-root-left))
   :init
