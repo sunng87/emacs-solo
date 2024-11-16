@@ -263,7 +263,6 @@
   (save-place-mode 1)
   (winner-mode)
   (xterm-mouse-mode 1)
-  (fido-vertical-mode)
   (file-name-shadow-mode 1)
 
   (with-current-buffer (get-buffer-create "*scratch*")
@@ -289,11 +288,12 @@
   :ensure nil
   :custom
   (display-buffer-alist
-   '(("\\*.*e?shell\\*"
-      (display-buffer-in-side-window)
-      (window-height . 0.25)
-      (side . bottom)
-      (slot . -1))
+   '(
+     ;; ("\\*.*e?shell\\*"
+     ;;  (display-buffer-in-side-window)
+     ;;  (window-height . 0.25)
+     ;;  (side . bottom)
+     ;;  (slot . -1))
      ("\\*\\(Backtrace\\|Warnings\\|Compile-Log\\|[Hh]elp\\|Messages\\|Bookmark List\\|Ibuffer\\|Occur\\|eldoc\\)\\*"
       (display-buffer-in-side-window)
       (window-height . 0.25)
@@ -310,7 +310,6 @@
   :defer t
   :custom
   (erc-join-buffer 'window)
-  ;; (erc-interactive-display ...) ;; this option will be available on next ERC release (5.6)
   (erc-hide-list '("JOIN" "PART" "QUIT"))
   (erc-timestamp-format "[%H:%M]")
   (erc-autojoin-channels-alist '((".*\\.libera\\.chat" "#emacs"))))
