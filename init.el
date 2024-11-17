@@ -144,7 +144,7 @@
 
         (when previous-line-number
         (goto-line previous-line-number))))
-  
+
 
   (defun emacs-solo/git-gutter-process-git-diff ()
     "Process git diff for adds/mods/removals. Still doesn't diff adds/mods."
@@ -222,7 +222,7 @@
   ;; Save manual customizations to other file than init.el
   (setq custom-file (locate-user-emacs-file "custom-vars.el"))
   (load custom-file 'noerror 'nomessage)
-  
+
   ;; Disabled in favor of icomplete
   ;; (add-hook 'completion-list-mode-hook #'emacs-solo/jump-to-completions)
 
@@ -241,7 +241,7 @@
           "   "
           mode-line-position
           (project-mode-line project-mode-line-format)
-          
+
           mode-line-format-right-align
           ;; All elements after this will be right-aligned
           (vc-mode vc-mode)
@@ -381,7 +381,7 @@
   (eval-after-load 'dired
   '(progn
      (define-key dired-mode-map (kbd "G") 'emacs-solo/window-dired-open-directory))))
-  
+
 ;;; ESHELL
 (use-package eshell
   :ensure nil
@@ -406,8 +406,8 @@
         (kill-buffer buffer))
       nil))
   (advice-add 'eshell/cat :override #'eshell/cat-with-syntax-highlighting)
-  
-  
+
+
   (require 'vc)
   (add-hook 'eshell-mode-hook
         (lambda ()
@@ -452,7 +452,7 @@
         ))
            "└─➜ ")))
 
-  
+
   (setq eshell-prompt-regexp "└─➜ ")
 
   (add-hook 'eshell-mode-hook (lambda () (setenv "TERM" "xterm-256color")))
