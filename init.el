@@ -525,6 +525,20 @@
   :custom
   (flymake-show-diagnostics-at-end-of-line t))
 
+;;; WHITESPACE
+(use-package whitespace
+  :ensure nil
+  :defer t
+  :hook (before-save . whitespace-cleanup))
+
+;;; Proced
+(use-package proced
+    :ensure nil
+    :defer t
+    :custom
+    (proced-enable-color-flag t)
+    (proced-tree-flag t))
+
 ;;; RUBY-TS-MODE
 (use-package ruby-ts-mode
   :mode "\\.rb\\'"
