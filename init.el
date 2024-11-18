@@ -316,14 +316,11 @@
 
 ;;; ICOMPLETE
 (use-package icomplete
-  :bind
-  ((:map icomplete-minibuffer-map
-     ("C-n" . icomplete-forward-completions)
-     ("C-p" . icomplete-backward-completions)
-     ("C-n" . icomplete-forward-completions)
-     ("C-v" . icomplete-vertical-toggle)
-     ("RET" . icomplete-force-complete-and-exit)
-     ))
+  :bind (:map icomplete-minibuffer-map
+              ("C-n" . icomplete-forward-completions)
+              ("C-p" . icomplete-backward-completions)
+              ("C-v" . icomplete-vertical-toggle)
+              ("RET" . icomplete-force-complete-and-exit))
   :hook
   (after-init . (lambda ()
                   (fido-mode -1)
@@ -338,6 +335,7 @@
   (setq icomplete-with-completion-tables t)
   (setq icomplete-in-buffer t)
   (setq icomplete-max-delay-chars 0)
+  (setq icomplete-scroll t)
   (advice-add 'completion-at-point
               :after #'minibuffer-hide-completions))
 
