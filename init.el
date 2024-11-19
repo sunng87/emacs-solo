@@ -28,6 +28,7 @@
   (dired-kill-when-opening-new-dired-buffer t)
   (dired-listing-switches "-al --group-directories-first")
   (global-auto-revert-non-file-buffers t)
+  (help-window-select t)
   (history-length 25)
   (inhibit-startup-message t)
   (initial-scratch-message "")
