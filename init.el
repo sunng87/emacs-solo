@@ -452,12 +452,27 @@
 
 ;;; VC
 (use-package vc
-  ;; This is not needed, but it is left here as a reminder of some of the keybindings
-  :bind
-  (("C-x v d" . vc-dir)
-   ("C-x v =" . vc-diff)
-   ("C-x v D" . vc-root-diff)
-   ("C-x v v" . vc-next-action)))
+  :ensure nil
+  :defer t
+  :config
+  (setq vc-git-diff-switches '("--patch-with-stat" "--histogram")) ;; add stats to `git diff'
+  (setq vc-git-log-switches '("--stat")) ;; add stats to `git log'
+  (setq vc-git-log-edit-summary-target-len 50)
+  (setq vc-git-log-edit-summary-max-len 70)
+  (setq vc-git-print-log-follow t)
+  (setq vc-git-revision-complete-only-branches nil)
+  (setq vc-annotate-display-mode 'scale)
+  (setq add-log-keep-changes-together t)
+
+  ;; This one is for editing commit messages
+  (require 'log-edit)
+  (setq log-edit-confirm 'changed)
+  (setq log-edit-keep-buffer nil)
+  (setq log-edit-require-final-newline t)
+  (setq log-edit-setup-add-author nil)
+
+  ;; We can see the files from the Diff with C-c C-d
+  (remove-hook 'log-edit-hook #'log-edit-show-files))
 
 ;;; SMERGE
 (use-package smerge-mode
@@ -466,6 +481,29 @@
               ("C-c ^ l" . smerge-keep-lower)
               ("C-c ^ n" . smerge-next)
               ("C-c ^ p" . smerge-previous)))
+
+;;; DIFF
+(use-package diff-mode
+  :ensure nil
+  :defer t
+  :config
+  (setq diff-default-read-only t)
+  (setq diff-advance-after-apply-hunk t)
+  (setq diff-update-on-the-fly t)
+  (setq diff-font-lock-syntax 'hunk-also))
+
+;;; EDIFF
+(use-package ediff
+  :ensure nil
+  :commands (ediff-buffers ediff-files ediff-buffers3 ediff-files3)
+  :init
+  (setq ediff-split-window-function 'split-window-horizontally)
+  (setq ediff-window-setup-function 'ediff-setup-windows-plain)
+  :config
+  (setq ediff-keep-variants nil)
+  (setq ediff-make-buffers-readonly-at-startup nil)
+  (setq ediff-merge-revisions-with-ancestor t)
+  (setq ediff-show-clashes-only t))
 
 ;;; ELDOC
 (use-package eldoc
