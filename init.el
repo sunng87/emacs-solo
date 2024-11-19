@@ -271,11 +271,16 @@
      ;;  (window-height . 0.25)
      ;;  (side . bottom)
      ;;  (slot . -1))
-     ("\\*\\(Backtrace\\|Warnings\\|Compile-Log\\|[Hh]elp\\|Messages\\|Bookmark List\\|Ibuffer\\|Occur\\|eldoc\\)\\*"
+     ("\\*\\(Backtrace\\|Warnings\\|Compile-Log\\|Messages\\|Bookmark List\\|Ibuffer\\|Occur\\|eldoc\\)\\*"
       (display-buffer-in-side-window)
       (window-height . 0.25)
       (side . bottom)
       (slot . 0))
+     ("\\*\\([Hh]elp\\)\\*"
+        (display-buffer-in-side-window)
+        (window-width . 75)
+        (side . right)
+        (slot . 0))
      ("\\*\\(Flymake diagnostics\\|xref\\|Completions\\)"
       (display-buffer-in-side-window)
       (window-height . 0.25)
