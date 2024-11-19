@@ -47,11 +47,11 @@
   :config
 
   ;; Configure fonts per OS
-  (set-face-attribute 'default nil :family "Hack" :height 100)
+  (set-face-attribute 'default nil :family "JetBrainsMono Nerd Font" :height 100)
   (when (eq system-type 'darwin)
     (setq insert-directory-program "gls")
     (setq mac-command-modifier 'meta)
-    (set-face-attribute 'default nil :family "Hack" :height 130))
+    (set-face-attribute 'default nil :family "JetBrainsMono Nerd Font" :height 130))
 
 
   (load-theme 'modus-vivendi-tinted t)
@@ -226,30 +226,6 @@
 
   ;; Disabled in favor of icomplete
   ;; (add-hook 'completion-list-mode-hook #'emacs-solo/jump-to-completions)
-
-
-  ;; TODO: work with this later
-  (setq mode-line-right-align-edge 'right-margin)
-  (setq mode-line-format
-        '("%e"
-          mode-line-front-space
-          (:propertize
-           ("" mode-line-mule-info mode-line-client mode-line-modified
-            mode-line-remote mode-line-window-dedicated)
-           display (min-width (6.0)))
-          mode-line-frame-identification
-          mode-line-buffer-identification
-          "   "
-          mode-line-position
-          (project-mode-line project-mode-line-format)
-
-          mode-line-format-right-align
-          ;; All elements after this will be right-aligned
-          (vc-mode vc-mode)
-          "  "
-          mode-line-modes
-          mode-line-misc-info
-          mode-line-end-spaces))
 
   :init
   (tool-bar-mode -1)
