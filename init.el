@@ -1,4 +1,4 @@
-;;; init.el --- Solo Emacs (no external packages) Configuration
+;;; init.el --- Solo Emacs (no external packages) Configuration  -*- lexical-binding: t; -*-
 ;;; Commentary:
 
 ;;; Code:
