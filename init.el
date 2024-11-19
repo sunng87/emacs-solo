@@ -404,7 +404,7 @@
            "┌─("
        (if (> eshell-last-command-status 0)
            "❌"
-         "✓")
+         "🐂")
        " "
        (number-to-string eshell-last-command-status)
            ")──("
