@@ -641,8 +641,7 @@
      (fg-mode-line-inactive fg-dim)
      (border-mode-line-active bg-dim)
      (border-mode-line-active bg-transparent)
-     (border-mode-line-inactive bg-transparent)
-     ))
+     (border-mode-line-inactive bg-transparent)))
 
   (modus-themes-with-colors
     (custom-set-faces
@@ -656,7 +655,6 @@
                                   :background ,bg-main
                                   :box nil)))
      `(tab-bar ((,c
-                 ;; :height 0.8
                  :background ,bg-main
                  :box nil)))
      `(tab-bar-tab ((,c
