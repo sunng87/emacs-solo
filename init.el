@@ -549,13 +549,17 @@
   :defer t
   :hook (before-save . whitespace-cleanup))
 
-;;; Proced
+;;; PROCED
 (use-package proced
-    :ensure nil
-    :defer t
-    :custom
-    (proced-enable-color-flag t)
-    (proced-tree-flag t))
+  :ensure nil
+  :defer t
+  :custom
+  (proced-enable-color-flag t)
+  (proced-tree-flag t)
+  (proced-auto-update-flag 'visible)
+  (proced-auto-update-interval 5)
+  (proced-descent t)
+  (proced-filter 'user)) ;; We can change interactively with `s'
 
 ;;; RUBY-TS-MODE
 (use-package ruby-ts-mode
