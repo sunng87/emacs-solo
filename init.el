@@ -20,13 +20,6 @@
   (create-lockfiles nil)
   (delete-by-moving-to-trash t)
   (delete-selection-mode 1)
-  (dired-dwim-target t)
-  (dired-guess-shell-alist-user
-   '(("\\.\\(png\\|jpe?g\\|tiff\\)" "feh" "xdg-open" "open")
-     ("\\.\\(mp[34]\\|m4a\\|ogg\\|flac\\|webm\\|mkv\\)" "mpv" "xdg-open" "open")
-     (".*" "xdg-open" "open")))
-  (dired-kill-when-opening-new-dired-buffer t)
-  (dired-listing-switches "-al --group-directories-first")
   (global-auto-revert-non-file-buffers t)
   (help-window-select t)
   (history-length 25)
@@ -84,10 +77,10 @@
   (defun emacs-solo/set-exec-path-from-shell-PATH ()
     "Set up Emacs' `exec-path' and PATH environment the same as user Shell."
     (interactive)
-    (let ((path-from-shell (replace-regexp-in-string
-                "[ \t\n]*$" "" (shell-command-to-string
-                        "$SHELL --login -c 'echo $PATH'"
-                        ))))
+    (let ((path-from-shell
+           (replace-regexp-in-string
+            "[ \t\n]*$" "" (shell-command-to-string
+                            "$SHELL --login -c 'echo $PATH'"))))
       (setenv "PATH" path-from-shell)
       (setq exec-path (split-string path-from-shell path-separator))))
 
@@ -323,6 +316,14 @@
   :ensure nil
   :bind
   (("M-i" . emacs-solo/window-dired-vc-root-left))
+  :custom
+  (dired-dwim-target t)
+  (dired-guess-shell-alist-user
+   '(("\\.\\(png\\|jpe?g\\|tiff\\)" "feh" "xdg-open" "open")
+     ("\\.\\(mp[34]\\|m4a\\|ogg\\|flac\\|webm\\|mkv\\)" "mpv" "xdg-open" "open")
+     (".*" "xdg-open" "open")))
+  (dired-kill-when-opening-new-dired-buffer t)
+  (dired-listing-switches "-al --group-directories-first")
   :init
   (defun emacs-solo/window-dired-vc-root-left (&optional directory-path)
     "Creates *Dired-Side* like an IDE side explorer"
@@ -385,50 +386,38 @@
   (advice-add 'eshell/cat :override #'eshell/cat-with-syntax-highlighting)
 
 
-  (require 'vc)
   (add-hook 'eshell-mode-hook
-        (lambda ()
+            (lambda ()
               (local-set-key (kbd "C-l")
-                 (lambda ()
+                             (lambda ()
                                (interactive)
                                (eshell/clear 1)
-                   (eshell-send-input)
-                   ))))
+                               (eshell-send-input)))))
 
+  (require 'vc)
   (setq eshell-prompt-function
-    (lambda ()
+        (lambda ()
           (concat
            "┌─("
-       (if (> eshell-last-command-status 0)
-           "❌"
-         "🐂")
-       " "
-       (number-to-string eshell-last-command-status)
+           (if (> eshell-last-command-status 0)
+               "❌"
+             "🐂")
+           " " (number-to-string eshell-last-command-status)
            ")──("
-       "🧘"
-       " "
-       (user-login-name)
+           "🧘 " (user-login-name)
            ")──("
-       "🕝"
-       " "
-           (format-time-string "%H:%M:%S" (current-time))
+           "🕝 " (format-time-string "%H:%M:%S" (current-time))
            ")──("
-       "📁"
-       " "
+           "📁 "
            (concat (if (>= (length (eshell/pwd)) 40)
-               (concat "..." (car (last (butlast (split-string (eshell/pwd) "/") 0))))
-             (abbreviate-file-name (eshell/pwd))))
+                       (concat "..." (car (last (butlast (split-string (eshell/pwd) "/") 0))))
+                     (abbreviate-file-name (eshell/pwd))))
            ")\n"
-       (if (car (vc-git-branches))
-           (concat
-        "├─("
-        "⎇"
-        " "
-        (car (vc-git-branches))
-        ")\n"
-        ))
+           (if (car (vc-git-branches))
+               (concat
+                "├─(ᚶ " (car (vc-git-branches)) ")\n"
+                ))
            "└─➜ ")))
-
 
   (setq eshell-prompt-regexp "└─➜ ")
 
