@@ -1,4 +1,4 @@
-;;; init.el --- Solo Emacs (no external packages) Configuration  -*- lexical-binding: t; -*-
+;;; init.el --- Emacs-Solo (no external packages) Configuration  -*- lexical-binding: t; -*-
 ;;; Commentary:
 
 ;;; Code:
@@ -24,7 +24,7 @@
   (dired-guess-shell-alist-user
    '(("\\.\\(png\\|jpe?g\\|tiff\\)" "feh" "xdg-open" "open")
      ("\\.\\(mp[34]\\|m4a\\|ogg\\|flac\\|webm\\|mkv\\)" "mpv" "xdg-open" "open")
-     (".*" "xdg-open")))
+     (".*" "xdg-open" "open")))
   (dired-kill-when-opening-new-dired-buffer t)
   (dired-listing-switches "-al --group-directories-first")
   (global-auto-revert-non-file-buffers t)
@@ -45,16 +45,15 @@
   (tab-width 4)
   (use-dialog-box nil)
   :config
+  (load-theme 'modus-vivendi-tinted t)
 
-  ;; Configure fonts per OS
   (set-face-attribute 'default nil :family "JetBrainsMono Nerd Font" :height 100)
+
   (when (eq system-type 'darwin)
     (setq insert-directory-program "gls")
     (setq mac-command-modifier 'meta)
     (set-face-attribute 'default nil :family "JetBrainsMono Nerd Font" :height 130))
 
-
-  (load-theme 'modus-vivendi-tinted t)
 
   (global-set-key (kbd "C-c p") (lambda ()
                   (interactive)
@@ -228,11 +227,8 @@
   ;; (add-hook 'completion-list-mode-hook #'emacs-solo/jump-to-completions)
 
   :init
-  (tool-bar-mode -1)
-  (menu-bar-mode -1)
-  (when scroll-bar-mode
-    (scroll-bar-mode -1))
-
+  (toggle-frame-maximized)
+  (select-frame-set-input-focus (selected-frame))
   (global-auto-revert-mode 1)
   (indent-tabs-mode -1)
   (recentf-mode 1)
@@ -289,6 +285,7 @@
 
 ;;; ERC
 (use-package erc
+  :ensure nil
   :defer t
   :custom
   (erc-join-buffer 'window)
@@ -444,6 +441,7 @@
 
 ;;; ISEARCH
 (use-package isearch
+  :ensure nil
   :config
   (setq isearch-lazy-count t)
   (setq lazy-count-prefix-format "(%s/%s) ")
@@ -476,6 +474,7 @@
 
 ;;; SMERGE
 (use-package smerge-mode
+  :ensure nil
   :bind (:map smerge-mode-map
               ("C-c ^ u" . smerge-keep-upper)
               ("C-c ^ l" . smerge-keep-lower)
@@ -507,11 +506,13 @@
 
 ;;; ELDOC
 (use-package eldoc
+  :ensure nil
   :init
   (global-eldoc-mode))
 
 ;;; EGLOT
 (use-package eglot
+  :ensure nil
   :custom
   (eglot-autoshutdown t)
   (eglot-events-buffer-size 0)
@@ -563,6 +564,7 @@
 
 ;;; RUBY-TS-MODE
 (use-package ruby-ts-mode
+  :ensure nil
   :mode "\\.rb\\'"
   :mode "Rakefile\\'"
   :mode "Gemfile\\'"
