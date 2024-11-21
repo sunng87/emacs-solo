@@ -38,8 +38,6 @@
   (tab-width 4)
   (use-dialog-box nil)
   :config
-  (load-theme 'modus-vivendi-tinted t)
-
   (set-face-attribute 'default nil :family "JetBrainsMono Nerd Font" :height 100)
 
   (when (eq system-type 'darwin)
@@ -628,50 +626,18 @@
 (use-package modus-themes
   :ensure nil
   :defer t
-  :init
-  (load-theme 'modus-vivendi-tinted t)
   :config
-
-  ;; Regular modus options
   (setq modus-themes-italic-constructs t
         modus-themes-bold-constructs t
         modus-themes-mixed-fonts t
         modus-themes-prompts '(bold intense))
 
-  (customize-set-variable
-   'modus-themes-common-palette-overrides
-   `(
-     ;; Make the mode-line borderless and stand out less
-     (bg-mode-line-active bg-main)
-     (fg-mode-line-active fg-main)
-     (bg-mode-line-inactive bg-main)
-     (fg-mode-line-inactive fg-dim)
-     (border-mode-line-active bg-dim)
-     (border-mode-line-active bg-transparent)
-     (border-mode-line-inactive bg-transparent)))
-
-  (modus-themes-with-colors
-    (custom-set-faces
-     `(fringe ((,c
-                :background ,bg-main
-                :box nil)))
-     `(line-number ((,c
-                     :background ,bg-main
-                     :box nil)))
-     `(line-number-current-line ((,c
-                                  :background ,bg-main
-                                  :box nil)))
-     `(tab-bar ((,c
-                 :background ,bg-main
-                 :box nil)))
-     `(tab-bar-tab ((,c
-                     :background ,bg-main
-                     :underline (:color ,blue-intense :style line)
-                     :box (:line-width 2 :style flat-button))))
-     `(tab-bar-tab-inactive ((,c
-                              :background ,bg-main
-                              :box (:line-width 2 :style flat-button)))))))
-
+  (setq modus-themes-common-palette-overrides modus-themes-preset-overrides-faint)
+  (ignore-errors
+    (load-theme 'modus-vivendi-tinted))
+  :init
+  (ignore-errors
+    (load-theme 'modus-vivendi-tinted)))
 
 (provide 'init)
 ;;; init.el ends here
