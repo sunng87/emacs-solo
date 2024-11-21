@@ -3,14 +3,23 @@
 #+EMAIL: rahul.juliato@gmail.com
 #+OPTIONS: toc: nil
 
+#+BEGIN_SRC elisp
+███████╗███╗   ███╗ █████╗  ██████╗███████╗    ███████╗ ██████╗ ██╗      ██████╗
+██╔════╝████╗ ████║██╔══██╗██╔════╝██╔════╝    ██╔════╝██╔═══██╗██║     ██╔═══██╗
+█████╗  ██╔████╔██║███████║██║     ███████╗    ███████╗██║   ██║██║     ██║   ██║
+██╔══╝  ██║╚██╔╝██║██╔══██║██║     ╚════██║    ╚════██║██║   ██║██║     ██║   ██║
+███████╗██║ ╚═╝ ██║██║  ██║╚██████╗███████║    ███████║╚██████╔╝███████╗╚██████╔╝
+╚══════╝╚═╝     ╚═╝╚═╝  ╚═╝ ╚═════╝╚══════╝    ╚══════╝ ╚═════╝ ╚══════╝ ╚═════╝
+#+END_SRC
+
 Emacs Solo is a configuration for when I wanna go back to the roots
-and test my self using Emacs with only the built-in goodies.
+and tesqt my self using Emacs with only the built-in goodies.
 
 It is minimalist and powerful. A place I visit once in a while.
 
 ** Installation
 
-Save the src_sh[:exports code]{<tag>init.el</tag>} file into a directory
+Save the src_sh{init.el} file into a directory
 of your liking and run Emacs with:
 
 #+BEGIN_SRC sh
@@ -18,3 +27,36 @@ emacs --init-directory=YOUR_DIR
 #+END_SRC
 
 And that's it, happy hacking! 🐂
+
+** How do I...
+*** Copy the current word under cursor?
+The usual answer is *M-b* to go back to the beginning of the
+word. *C-M-SPC* to expand the selection to the end of the world and *M-w*.
+
+**Custom Emacs-Solo Solution**: Use the isearch way to search a word (it has
+better completion than C-M-SPC), like *M-s M-i*. You can now just *M-w*.
+
+*** Edit multiple search entries at once?
+
+#+BEGIN_SRC text
+  Original problem: I usually consult-outline, then embark-collect and wgrep...
+#+END_SRC
+
+You can start by using *occur*, or using *isearch* and than moving to occur.
+
+Next start the edit mode of the occur buffer with *e*.
+
+Make your changes, apply it with *C-c C-c* .
+
+*** Edit multiple search entries between several files at once?
+
+#+BEGIN_SRC text
+  Original problem: I usually consult-grep, then use embark collect and wgrep...
+#+END_SRC
+
+Open dired on the root folder of where you search will happen. Mark
+some files and or folders with *m*.
+
+Use `dired-do-query-replace-regexp` or in a dired buffer hit *Q*.
+
+Confirm it all or one by one, use *?* to check the options.
