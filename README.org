@@ -31,7 +31,7 @@ And that's it, happy hacking! 🐂
 ** How do I...
 *** Copy the current word under cursor?
 The usual answer is *M-b* to go back to the beginning of the
-word. *C-M-SPC* to expand the selection to the end of the world and *M-w*.
+word. *C-M-SPC* to expand the selection to the end of the word and *M-w*.
 
 *Custom Emacs-Solo Solution*: Use the isearch way to search a word (it has
 better completion than C-M-SPC), like *M-s M-.* you can now just *M-w*.
