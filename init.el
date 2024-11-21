@@ -443,7 +443,7 @@
         (kill-new selection)
         (isearch-exit))))
 
-  ;; Bind `M-w` in isearch to copy the selected word, so M-w M-. M-w
+  ;; Bind `M-w` in isearch to copy the selected word, so M-s M-. M-w
   ;; does a great job of 'copying the current word under cursor'.
   (define-key isearch-mode-map (kbd "M-w") 'isearch-copy-selected-word))
 
