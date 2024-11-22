@@ -522,5 +522,127 @@
   (ignore-errors
     (load-theme 'modus-vivendi-tinted)))
 
+
+;;; EMACS-SOLO-GUTTER
+;;
+;;  A **HIGHLY** `experimental' git gutter like.
+;;
+(use-package emacs-solo-gutter
+  :ensure nil
+  :defer t
+  :init
+  (defun emacs-solo/goto-next-hunk ()
+    "Jump cursor to the closest next hunk."
+    (interactive)
+    (let* ((current-line (line-number-at-pos))
+           (line-numbers (mapcar #'car git-gutter-diff-info))
+           (sorted-line-numbers (sort line-numbers '<))
+           (next-line-number
+            (if (not (member current-line sorted-line-numbers))
+                ;; If the current line is not in the list, find the next closest line number
+                (cl-find-if (lambda (line) (> line current-line)) sorted-line-numbers)
+              ;; If the current line is in the list, find the next line number that is not consecutive
+              (let ((last-line nil))
+                (cl-loop for line in sorted-line-numbers
+                         when (and (> line current-line)
+                                   (or (not last-line)
+                                       (/= line (1+ last-line))))
+                         return line
+                         do (setq last-line line))))))
+
+      (when next-line-number
+        (goto-line next-line-number))))
+
+  (defun emacs-solo/goto-previous-hunk ()
+    "Jump cursor to the closest previous hunk."
+    (interactive)
+    (let* ((current-line (line-number-at-pos))
+           (line-numbers (mapcar #'car git-gutter-diff-info))
+           (sorted-line-numbers (sort line-numbers '<))
+           (previous-line-number
+            (if (not (member current-line sorted-line-numbers))
+                ;; If the current line is not in the list, find the previous closest line number
+                (cl-find-if (lambda (line) (< line current-line)) (reverse sorted-line-numbers))
+              ;; If the current line is in the list, find the previous line number that has no direct predecessor
+              (let ((previous-line nil))
+                (dolist (line sorted-line-numbers)
+                  (when (and (< line current-line)
+                             (not (member (1- line) line-numbers)))
+                    (setq previous-line line)))
+                previous-line))))
+
+      (when previous-line-number
+        (goto-line previous-line-number))))
+
+
+  (defun emacs-solo/git-gutter-process-git-diff ()
+    "Process git diff for adds/mods/removals. Still doesn't diff adds/mods."
+    (interactive)
+    (let* ((file-path (buffer-file-name))
+           (grep-command (if (eq system-type 'darwin)
+                             "ggrep -Po"
+                           "grep -Po"))
+           (output (shell-command-to-string (format "git diff --unified=0 %s | %s '^@@ -[0-9]+(,[0-9]+)? \\+\\K[0-9]+(,[0-9]+)?(?= @@)'" file-path grep-command))))
+      (setq lines (split-string output "\n"))
+      (setq result '())
+      (dolist (line lines)
+        (if (string-match "\\(^[0-9]+\\),\\([0-9]+\\)\\(?:,0\\)?$" line)
+            (let ((num (string-to-number (match-string 1 line)))
+                  (count (string-to-number (match-string 2 line))))
+              (if (= count 0)
+                  (add-to-list 'result (cons (+ 1 num) "deleted"))
+                (dotimes (i count)
+                  (add-to-list 'result (cons (+ num i) "added"))))))
+        (if (string-match "\\(^[0-9]+\\)$" line)
+            (add-to-list 'result (cons (string-to-number line) "added")))))
+    (setq-local git-gutter-diff-info result)
+    result)
+
+  (defun emacs-solo/git-gutter-add-mark ()
+    "Add symbols to the margin based on Git diff statuses."
+    (interactive)
+    (let ((lines-status (emacs-solo/git-gutter-process-git-diff)))
+      (remove-overlays)
+      (save-excursion
+        (goto-char (point-min))
+        (while (not (eobp))
+          (let* ((line-num (line-number-at-pos))
+                 (status (cdr (assoc line-num lines-status))))
+            (when status
+              (move-to-column 0 t)
+              (let ((overlay (make-overlay (point-at-bol) (point-at-eol))))
+                (overlay-put overlay 'before-string
+                             (propertize (if (string= status "added") "+" "-")
+                                         'face (if (string= status "added")
+                                                   '(:foreground "lightgreen")
+                                                 '(:foreground "tomato")))))
+              (forward-line))
+            (unless status
+              (move-to-column 0 t)
+              (let ((overlay (make-overlay (point-at-bol) (point-at-bol))))
+                (overlay-put overlay 'before-string " "))
+              (forward-line)))))))
+
+  (defun emacs-solo/git-gutter-off ()
+    "Greedly remove all git gutter marks and other overlays."
+    (interactive)
+    (remove-overlays)
+    (remove-hook 'pre-command-hook #'emacs-solo/git-gutter-add-mark)
+    (remove-hook 'after-save-hook #'emacs-solo/git-gutter-add-mark))
+
+  (defun emacs-solo/git-gutter-on ()
+    (interactive)
+    (emacs-solo/git-gutter-add-mark)
+    (add-hook 'pre-command-hook #'emacs-solo/git-gutter-add-mark)
+    (add-hook 'after-save-hook #'emacs-solo/git-gutter-add-mark))
+
+  (global-set-key (kbd "M-9") 'emacs-solo/goto-previous-hunk)
+  (global-set-key (kbd "M-0") 'emacs-solo/goto-next-hunk)
+  (global-set-key (kbd "C-c g p") 'emacs-solo/goto-previous-hunk)
+  (global-set-key (kbd "C-c g r") 'emacs-solo/git-gutter-off)
+  (global-set-key (kbd "C-c g g") 'emacs-solo/git-gutter-on)
+  (global-set-key (kbd "C-c g n") 'emacs-solo/goto-next-hunk))
+
+
 (provide 'init)
 ;;; init.el ends here
