@@ -525,6 +525,24 @@
 
 
 
+;;; EMACS-SOLO-TRANSPARENCY
+;;
+;;  Custom functions to set/unset transparency
+;;
+(use-package emacs-solo-transparency
+  :ensure nil
+  :defer t
+  :init
+  (defun emacs-solo/transparency-set ()
+    "Set frame transparency (Graphical Mode)."
+    (interactive)
+    (set-frame-parameter (selected-frame) 'alpha '(90 90)))
+
+  (defun emacs-solo/transparency-unset ()
+    "Unset frame transparency (Graphical Mode)."
+    (interactive)
+    (set-frame-parameter (selected-frame) 'alpha '(100 100))))
+
 ;;; EMACS-SOLO-EXEC-PATH-FROM-SHELL
 ;;
 ;;  Loads users default shell PATH settings into Emacs. Usefull
