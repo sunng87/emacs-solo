@@ -26,7 +26,11 @@ with:
 emacs --init-directory=YOUR_DIR
 #+END_SRC
 
+You can also simply copy *init.el* and *early-init.el* into any folder
+issue the same command as above
+
 And that's it, happy hacking! 🐂
+
 
 ** How do I...
 *** Copy the current word under cursor?
