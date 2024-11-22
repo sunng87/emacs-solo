@@ -13,7 +13,7 @@
 #+END_SRC
 
 Emacs Solo is a configuration for when I wanna go back to the roots
-and tesqt my self using Emacs with only the built-in goodies.
+and test my self using Emacs with only built-in goodies.
 
 It is minimalist and powerful. A place I visit once in a while.
 
