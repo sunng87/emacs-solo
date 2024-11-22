@@ -525,6 +525,28 @@
 
 
 
+;;; EMACS-SOLO-EXEC-PATH-FROM-SHELL
+;;
+;;  Loads users default shell PATH settings into Emacs. Usefull
+;;  when calling Emacs directly from GUI systems.
+;;
+(use-package emacs-solo-exec-path-from-shell
+  :ensure nil
+  :defer t
+  :init
+  (defun emacs-solo/set-exec-path-from-shell-PATH ()
+    "Set up Emacs' `exec-path' and PATH environment the same as user Shell."
+    (interactive)
+    (let ((path-from-shell
+           (replace-regexp-in-string
+            "[ \t\n]*$" "" (shell-command-to-string
+                            "$SHELL --login -c 'echo $PATH'"))))
+      (setenv "PATH" path-from-shell)
+      (setq exec-path (split-string path-from-shell path-separator))
+      (message ">>> emacs-solo: PATH loaded")))
+
+  (add-hook 'after-init-hook #'emacs-solo/set-exec-path-from-shell-PATH))
+
 ;;; EMACS-SOLO-PROJECT-SELECT
 ;;
 ;;  Interactively finds a project in a Projects folder and sets it
