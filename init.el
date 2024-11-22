@@ -525,6 +525,40 @@
 
 
 
+;;; EMACS-SOLO-MOVEMENTS
+;;
+;;  Functions to better move around text and Emacs
+;;
+(use-package emacs-solo-movements
+  :ensure nil
+  :defer t
+  :init
+
+  (defun emacs-solo-movements/scroll-down-centralize ()
+    (interactive)
+    (scroll-up-command)
+    (recenter))
+
+  (defun emacs-solo-movements/scroll-up-centralize ()
+    (interactive)
+    (scroll-down-command)
+    (unless (= (window-start) (point-min))
+      (recenter))
+    (when (= (window-start) (point-min))
+      (let ((midpoint (/ (window-height) 2)))
+        (goto-char (window-start))
+        (forward-line midpoint)
+        (recenter midpoint))))
+
+  (global-set-key (kbd "C-v") #'emacs-solo-movements/scroll-down-centralize)
+  (global-set-key (kbd "M-v") #'emacs-solo-movements/scroll-up-centralize)
+
+
+  (global-set-key (kbd "C-c p") (lambda ()
+                                  (interactive)
+                                  (shell-command (concat "prettier --write " (shell-quote-argument (buffer-file-name))))
+                                  (revert-buffer t t t))))
+
 ;;; EMACS-SOLO-TRANSPARENCY
 ;;
 ;;  Custom functions to set/unset transparency
