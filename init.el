@@ -516,12 +516,54 @@
         modus-themes-prompts '(bold intense))
 
   (setq modus-themes-common-palette-overrides modus-themes-preset-overrides-faint)
+
   (ignore-errors
     (load-theme 'modus-vivendi-tinted))
   :init
   (ignore-errors
     (load-theme 'modus-vivendi-tinted)))
 
+
+
+;;; EMACS-SOLO-PROJECT-SELECT
+;;
+;;  Interactively finds a project in a Projects folder and sets it
+;;  to current `project.el' project.
+;;
+(use-package emacs-solo-project-select
+  :ensure nil
+  :init
+  (defvar emacs-solo-default-projects-folder "~/Projects"
+    "Default folder to search for projects.")
+
+  (defvar emacs-solo-default-projects-input "**"
+    "Default input to use when finding a project.")
+
+  (defun emacs-solo/find-projects-and-switch (&optional directory)
+    "Find and switch to a project directory from ~/Projects."
+    (interactive)
+    (let* ((d (or directory emacs-solo-default-projects-folder))
+           (find-command (concat "find " d " -mindepth 1 -maxdepth 4 -type d"))
+           (project-list (split-string (shell-command-to-string find-command) "\n" t))
+           (initial-input emacs-solo-default-projects-input))
+      (let ((selected-project
+             (completing-read
+              "Search project folder: "
+              project-list
+              nil nil
+              initial-input)))
+        (when (and selected-project (file-directory-p selected-project))
+          (project-switch-project selected-project)))))
+
+  (defun emacs-solo/minibuffer-move-cursor ()
+    "Move cursor between `*` characters when minibuffer is populated with `**`."
+    (when (string-prefix-p emacs-solo-default-projects-input (minibuffer-contents))
+      (goto-char (+ (minibuffer-prompt-end) 1))))
+
+  (add-hook 'minibuffer-setup-hook #'emacs-solo/minibuffer-move-cursor)
+
+  :bind (:map project-prefix-map
+         ("P" . emacs-solo/find-projects-and-switch)))
 
 ;;; EMACS-SOLO-GUTTER
 ;;
