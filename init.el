@@ -524,6 +524,38 @@
     (load-theme 'modus-vivendi-tinted)))
 
 
+;;; EMACS-SOLO-HOOKS
+;;
+;;  Custom functions to set/unset transparency
+;;
+(use-package emacs-solo-hooks
+  :ensure nil
+  :defer t
+  :init
+  (defun emacs-solo/jump-to-completions ()
+    "Hook function to move focus to *Completions* buffer."
+    (when (string= (buffer-name) "*Completions*")
+      (goto-char (point-min))
+      (switch-to-buffer-other-window "*Completions*")))
+
+  ;; Disabled in favor of icomplete
+  ;; (add-hook 'completion-list-mode-hook #'emacs-solo/jump-to-completions)
+
+  (defun emacs-solo/prefer-tabs ()
+    "Disables indent-tabs-mode, and prefer spaces over tabs."
+    (interactive)
+    (indent-tabs-mode -1))
+
+  (add-hook 'prog-mode-hook #'emacs-solo/prefer-tabs)
+
+
+  (defun emacs-solo/elisp-mode-hook ()
+    (interactive)
+    (outline-minor-mode 1)
+    (outline-hide-sublevels 1))
+
+  (add-hook 'emacs-lisp-mode-hook #'emacs-solo/elisp-mode-hook))
+
 
 ;;; EMACS-SOLO-MOVEMENTS
 ;;
