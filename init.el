@@ -524,18 +524,18 @@ and restart Flymake to apply the changes."
   :ensure nil
   :defer t
   :config
-  (setq modus-themes-italic-constructs t
-        modus-themes-bold-constructs t
-        modus-themes-mixed-fonts t
-        modus-themes-prompts '(bold intense))
+  ;; (setq modus-themes-italic-constructs t
+  ;;       modus-themes-bold-constructs t
+  ;;       modus-themes-mixed-fonts t
+  ;;       modus-themes-prompts '(bold intense))
 
-  (setq modus-themes-common-palette-overrides modus-themes-preset-overrides-faint)
+  (setq modus-themes-common-palette-overrides modus-themes-preset-overrides-cooler)
 
   (ignore-errors
-    (load-theme 'modus-vivendi-tinted))
+    (load-theme 'modus-vivendi))
   :init
   (ignore-errors
-    (load-theme 'modus-vivendi-tinted)))
+    (load-theme 'modus-vivendi)))
 
 
 ;;; EMACS-SOLO-HOOKS
