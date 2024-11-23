@@ -373,9 +373,23 @@
   :bind (:map flymake-mode-map
               ("C-c ! n" . flymake-goto-next-error)
               ("C-c ! p" . flymake-goto-prev-error)
-              ("C-c ! l" . flymake-show-buffer-diagnostics))
+              ("C-c ! l" . flymake-show-buffer-diagnostics)
+              ("C-c ! t" . toggle-flymake-diagnostics-at-eol))
   :custom
-  (flymake-show-diagnostics-at-end-of-line t))
+  (flymake-show-diagnostics-at-end-of-line nil)
+  :config
+  ;; Define the toggle function
+  (defun toggle-flymake-diagnostics-at-eol ()
+    "Toggle the display of Flymake diagnostics at the end of the line
+and restart Flymake to apply the changes."
+    (interactive)
+    (setq flymake-show-diagnostics-at-end-of-line
+          (not flymake-show-diagnostics-at-end-of-line))
+    (flymake-mode -1) ;; Disable Flymake
+    (flymake-mode 1)  ;; Re-enable Flymake
+    (message "Flymake diagnostics at end of line: %s"
+             (if flymake-show-diagnostics-at-end-of-line
+                 "Enabled" "Disabled"))))
 
 ;;; WHITESPACE
 (use-package whitespace
