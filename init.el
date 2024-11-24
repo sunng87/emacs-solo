@@ -349,8 +349,12 @@
   :custom
   (eglot-autoshutdown t)
   (eglot-events-buffer-size 0)
+  (eglot-events-buffer-config '(:size 0 :format full))
   (eglot-prefer-plaintext t)
+  (jsonrpc-event-hook nil)
   :init
+  (fset #'jsonrpc--log-event #'ignore)
+
   (defun emacs-solo/eglot-setup ()
     "Setup eglot mode with specific exclusions."
     (unless (eq major-mode 'emacs-lisp-mode)
