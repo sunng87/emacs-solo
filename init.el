@@ -693,7 +693,7 @@ and restart Flymake to apply the changes."
 ;;; EMACS-SOLO-HIGHLIGHT-KEYWORDS-MODE
 ;;
 ;;  Highlights a list of words like TODO, FIXME...
-;;  Code borrowed from `alternatived'
+;;  Code borrowed from `alternateved'
 ;;
 (use-package emacs-solo-highlight-keywords-mode
   :ensure nil
