@@ -604,10 +604,51 @@ and restart Flymake to apply the changes."
   (global-set-key (kbd "M-v") #'emacs-solo-movements/scroll-up-centralize)
 
 
-  (global-set-key (kbd "C-c p") (lambda ()
-                                  (interactive)
-                                  (shell-command (concat "prettier --write " (shell-quote-argument (buffer-file-name))))
-                                  (revert-buffer t t t))))
+  (defun emacs-solo-movements/format-current-file ()
+    "Format the current file using biome if biome.json is present; otherwise, use prettier.
+Also first tries the local node_modules/.bin and later the global bin."
+    (interactive)
+    (let* ((file (buffer-file-name))
+           (project-root (locate-dominating-file file "node_modules"))
+           (biome-config (and project-root (file-exists-p (expand-file-name "biome.json" project-root))))
+           (local-biome (and project-root (expand-file-name "node_modules/.bin/biome" project-root)))
+           (global-biome (executable-find "biome"))
+           (local-prettier (and project-root (expand-file-name "node_modules/.bin/prettier" project-root)))
+           (global-prettier (executable-find "prettier"))
+           (formatter nil)
+           (source nil)
+           (command nil)
+           (start-time (float-time))) ;; Capture the start time
+      (cond
+       ;; Use Biome if biome.json exists
+       ((and biome-config local-biome (file-executable-p local-biome))
+        (setq formatter local-biome)
+        (setq source "biome (local)")
+        (setq command (format "%s format --write %s" formatter (shell-quote-argument file))))
+       ((and biome-config global-biome)
+        (setq formatter global-biome)
+        (setq source "biome (global)")
+        (setq command (format "%s format --write %s" formatter (shell-quote-argument file))))
+
+       ;; Fall back to Prettier if no biome.json
+       ((and local-prettier (file-executable-p local-prettier))
+        (setq formatter local-prettier)
+        (setq source "prettier (local)")
+        (setq command (format "%s --write %s" formatter (shell-quote-argument file))))
+       ((and global-prettier)
+        (setq formatter global-prettier)
+        (setq source "prettier (global)")
+        (setq command (format "%s --write %s" formatter (shell-quote-argument file)))))
+      (if command
+          (progn
+            (save-buffer)
+            (shell-command command)
+            (revert-buffer t t t)
+            (let ((elapsed-time (* 1000 (- (float-time) start-time)))) ;; Calculate elapsed time in ms
+              (message "Formatted with %s - %.2f ms" source elapsed-time)))
+        (message "No formatter found (biome or prettier)"))))
+
+  (global-set-key (kbd "C-c p") #'emacs-solo-movements/format-current-file))
 
 ;;; EMACS-SOLO-TRANSPARENCY
 ;;
