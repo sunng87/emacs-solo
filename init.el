@@ -731,6 +731,166 @@ Also first tries the local node_modules/.bin and later the global bin."
          ("P" . emacs-solo/find-projects-and-switch)))
 
 
+;;; EMACS-SOLO-VIPER-EXTENSIONS
+;;
+;;  Better VIM (and not VI) bindings for viper-mode
+;;
+(use-package emacs-solo-viper-extensions
+  :ensure nil
+  :defer t
+  :after viper
+  :init
+  (defun viper-operate-inside-delimiters (open close op)
+    "Perform OP inside delimiters OPEN and CLOSE (e.g., (), {}, '', or \"\")."
+    (save-excursion
+      (search-backward (char-to-string open) nil t)
+      (forward-char) ;; Move past the opening delimiter
+      (let ((start (point)))
+        (search-forward (char-to-string close) nil t)
+        (backward-char) ;; Move back before the closing delimiter
+        (funcall op start (point)))))
+
+  (defun viper-delete-inside-delimiters (open close)
+    "Delete text inside delimiters OPEN and CLOSE, saving it to the kill ring."
+    (interactive "cEnter opening delimiter: \ncEnter closing delimiter: ")
+    (viper-operate-inside-delimiters open close 'kill-region))
+
+  (defun viper-yank-inside-delimiters (open close)
+    "Copy text inside delimiters OPEN and CLOSE to the kill ring."
+    (interactive "cEnter opening delimiter: \ncEnter closing delimiter: ")
+    (viper-operate-inside-delimiters open close 'kill-ring-save))
+
+  (defun viper-delete-line-or-region ()
+    "Delete the current line or the selected region in Viper mode.
+The deleted text is saved to the kill ring."
+    (interactive)
+    (if (use-region-p)
+        ;; If a region is active, delete it
+        (progn
+          (pulse-momentary-highlight-region (region-beginning) (region-end))
+          (run-at-time 0.1 nil 'kill-region (region-beginning) (region-end)))
+      ;; Otherwise, delete the current line
+      (pulse-momentary-highlight-region (line-beginning-position) (line-end-position))
+      (run-at-time 0.1 nil 'kill-region (line-beginning-position) (line-end-position 2))))
+
+  (defun viper-yank-line-or-region ()
+    "Yank the current line or the selected region and highlight the region."
+    (interactive)
+    (if (use-region-p)
+        ;; If a region is selected, yank it
+        (progn
+          (kill-ring-save (region-beginning) (region-end))  ;; Yank the region
+          (pulse-momentary-highlight-region (region-beginning) (region-end)))
+      ;; Otherwise, yank the current line
+      (let ((start (line-beginning-position))
+            (end (line-end-position)))
+        (kill-ring-save start end)  ;; Yank the current line
+        (pulse-momentary-highlight-region start end))))
+
+  (defun viper-visual-select ()
+    "Start visual selection from the current position."
+    (interactive)
+    (set-mark (point)))
+
+  (defun viper-visual-select-line ()
+    "Start visual selection from the beginning of the current line."
+    (interactive)
+    (set-mark (line-beginning-position)))
+
+  (defun viper-delete-inner-word ()
+    "Delete the current word under the cursor, handling edge cases."
+    (interactive)
+    (let ((bounds (bounds-of-thing-at-point 'word)))
+      (if bounds
+          (kill-region (car bounds) (cdr bounds))
+        (message "No word under cursor"))))
+
+  (defun viper-yank-inner-word ()
+    "Yank (copy) the current word under the cursor, handling edge cases."
+    (interactive)
+    (let ((bounds (bounds-of-thing-at-point 'word)))
+      (pulse-momentary-highlight-region (car bounds) (cdr bounds))
+      (if bounds
+          (kill-ring-save (car bounds) (cdr bounds))
+        (message "No word under cursor"))))
+
+  (defun viper-delete-inner-compound-word ()
+    "Delete the entire compound word under the cursor, including `-` and `_`."
+    (interactive)
+    (let ((bounds (viper-compound-word-bounds)))
+      (if bounds
+          (kill-region (car bounds) (cdr bounds))
+        (message "No compound word under cursor"))))
+
+  (defun viper-yank-inner-compound-word ()
+    "Yank the entire compound word under the cursor into the kill ring."
+    (interactive)
+    (let ((bounds (viper-compound-word-bounds)))
+      (if bounds
+          (kill-ring-save (car bounds) (cdr bounds))
+        (message "No compound word under cursor"))))
+
+  (defun viper-compound-word-bounds ()
+    "Get the bounds of a compound word under the cursor.
+A compound word includes letters, numbers, `-`, and `_`."
+    (save-excursion
+      (let* ((start (progn
+                      (skip-chars-backward "a-zA-Z0-9_-")
+                      (point)))
+             (end (progn
+                    (skip-chars-forward "a-zA-Z0-9_-")
+                    (point))))
+        (when (< start end) (cons start end)))))
+
+  (defun viper-go-to-first-line ()
+    "Go to the first line of the document."
+    (interactive)
+    (goto-char (point-min)))
+
+  (defun viper-go-to-last-line ()
+    "Go to the last line of the document."
+    (interactive)
+    (goto-char (point-max)))
+
+  ;; Delete inside delimiters
+  (define-key viper-vi-global-user-map (kbd "di(") (lambda () (interactive) (viper-delete-inside-delimiters ?\( ?\))))
+  (define-key viper-vi-global-user-map (kbd "di{") (lambda () (interactive) (viper-delete-inside-delimiters ?{ ?})))
+  (define-key viper-vi-global-user-map (kbd "di\"") (lambda () (interactive) (viper-delete-inside-delimiters ?\" ?\")))
+  (define-key viper-vi-global-user-map (kbd "di'") (lambda () (interactive) (viper-delete-inside-delimiters ?' ?')))
+
+  ;; Yank inside delimiters
+  (define-key viper-vi-global-user-map (kbd "yi(") (lambda () (interactive) (viper-yank-inside-delimiters ?\( ?\))))
+  (define-key viper-vi-global-user-map (kbd "yi{") (lambda () (interactive) (viper-yank-inside-delimiters ?{ ?})))
+  (define-key viper-vi-global-user-map (kbd "yi\"") (lambda () (interactive) (viper-yank-inside-delimiters ?\" ?\")))
+  (define-key viper-vi-global-user-map (kbd "yi'") (lambda () (interactive) (viper-yank-inside-delimiters ?' ?')))
+
+  ;; Delete/Yank current word
+  (define-key viper-vi-global-user-map (kbd "diw") 'viper-delete-inner-word)
+  (define-key viper-vi-global-user-map (kbd "yiw") 'viper-yank-inner-word)
+  (define-key viper-vi-global-user-map (kbd "diW") 'viper-delete-inner-compound-word)
+  (define-key viper-vi-global-user-map (kbd "yiW") 'viper-yank-inner-compound-word)
+
+  ;; Beginning/End buffer
+  (define-key viper-vi-global-user-map (kbd "G") nil)
+  (define-key viper-vi-global-user-map (kbd "GG") 'viper-go-to-last-line)
+  (define-key viper-vi-global-user-map (kbd "g") nil)
+  (define-key viper-vi-global-user-map (kbd "gg") 'viper-go-to-first-line)
+
+  ;; Delete/Yank current line or region
+  (define-key viper-vi-global-user-map (kbd "dd") 'viper-delete-line-or-region)
+  (define-key viper-vi-global-user-map (kbd "yy") 'viper-yank-line-or-region)
+
+  ;; Visual mode is actually marking
+  (define-key viper-vi-global-user-map (kbd "v") 'viper-visual-select)
+  (define-key viper-vi-global-user-map (kbd "V") 'viper-visual-select-line)
+
+  ;; Beginning/End buffer
+  (define-key viper-vi-global-user-map (kbd "gd") 'xref-find-references)
+  (global-set-key (kbd "C-o") 'xref-go-back)
+
+  )
+
+
 ;;; EMACS-SOLO-HIGHLIGHT-KEYWORDS-MODE
 ;;
 ;;  Highlights a list of words like TODO, FIXME...
