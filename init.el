@@ -929,6 +929,28 @@ A compound word includes letters, numbers, `-`, and `_`."
     (interactive)
     (goto-char (point-max)))
 
+  (defun viper-window-split-horizontally ()
+    "Split the window horizontally (mimics Vim's `C-w s`)."
+    (interactive)
+    (split-window-below)
+    (other-window 1))
+
+  (defun viper-window-split-vertically ()
+    "Split the window vertically (mimics Vim's `C-w v`)."
+    (interactive)
+    (split-window-right)
+    (other-window 1))
+
+  (defun viper-window-close ()
+    "Close the current window (mimics Vim's `C-w c`)."
+    (interactive)
+    (delete-window))
+
+  (defun viper-window-maximize ()
+    "Maximize the current window (mimics Vim's `C-w o`)."
+    (interactive)
+    (delete-other-windows))
+
   ;; Delete inside delimiters
   (define-key viper-vi-global-user-map (kbd "di(") (lambda () (interactive) (viper-delete-inside-delimiters ?\( ?\))))
   (define-key viper-vi-global-user-map (kbd "di{") (lambda () (interactive) (viper-delete-inside-delimiters ?{ ?})))
@@ -965,7 +987,42 @@ A compound word includes letters, numbers, `-`, and `_`."
   (define-key viper-vi-global-user-map (kbd "gd") 'xref-find-references)
   (global-set-key (kbd "C-o") 'xref-go-back)
 
-  )
+  ;; Map `C-w` followed by specific keys to window commands in Viper
+  (define-key viper-vi-global-user-map (kbd "C-w s") 'viper-window-split-horizontally)
+  (define-key viper-vi-global-user-map (kbd "C-w v") 'viper-window-split-vertically)
+  (define-key viper-vi-global-user-map (kbd "C-w c") 'viper-window-close)
+  (define-key viper-vi-global-user-map (kbd "C-w o") 'viper-window-maximize)
+
+  ;; Add navigation commands to mimic Vim's `C-w hjkl`
+  (define-key viper-vi-global-user-map (kbd "C-w h") 'windmove-left)
+  (define-key viper-vi-global-user-map (kbd "C-w l") 'windmove-right)
+  (define-key viper-vi-global-user-map (kbd "C-w k") 'windmove-up)
+  (define-key viper-vi-global-user-map (kbd "C-w j") 'windmove-down)
+
+  ;; Indent region
+  (define-key viper-vi-global-user-map (kbd "==") 'indent-region)
+
+  ;; Word spelling
+  (define-key viper-vi-global-user-map (kbd "z=") 'ispell-word)
+
+  ;; Keybindings for buffer navigation and switching in Viper mode
+  (define-key viper-vi-global-user-map (kbd "] b") 'next-buffer)
+  (define-key viper-vi-global-user-map (kbd "[ b") 'previous-buffer)
+  (define-key viper-vi-global-user-map (kbd "b l") 'switch-to-buffer)
+  (define-key viper-vi-global-user-map (kbd "SPC SPC") 'switch-to-buffer)
+
+  ;; Tabs (like in tmux tabs, not vscode tabs)
+  (define-key viper-vi-global-user-map (kbd "C-w t") 'tab-bar-new-tab)
+  (define-key viper-vi-global-user-map (kbd "] t") 'tab-next)
+  (define-key viper-vi-global-user-map (kbd "[ t") 'tab-previous)
+
+  ;; flymake
+  (define-key viper-vi-global-user-map (kbd "SPC x x") 'flymake-show-buffer-diagnostics)
+  (define-key viper-vi-global-user-map (kbd "] d") 'flymake-goto-next-error)
+  (define-key viper-vi-global-user-map (kbd "[ d") 'flymake-goto-prev-error)
+  (define-key viper-vi-global-user-map (kbd "SPC t i") 'toggle-flymake-diagnostics-at-eol)
+)
+
 
 
 ;;; EMACS-SOLO-HIGHLIGHT-KEYWORDS-MODE
