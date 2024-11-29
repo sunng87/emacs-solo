@@ -299,8 +299,65 @@
   (setq log-edit-require-final-newline t)
   (setq log-edit-setup-add-author nil)
 
-  ;; We can see the files from the Diff with C-c C-d
-  (remove-hook 'log-edit-hook #'log-edit-show-files))
+  ;; Removes the bottom window with modified files list
+  (remove-hook 'log-edit-hook #'log-edit-show-files)
+
+  (with-eval-after-load 'vc-dir
+    ;; In vc-git and vc-dir for git buffers, make (C-x v) a run git add, u run git
+    ;; reset, and r run git reset and checkout from head.
+    (defun emacs-solo/vc-git-command (verb fn)
+      "Execute a Git command with VERB as action description and FN as operation on files."
+      (let* ((fileset (vc-deduce-fileset t)) ;; Deduce fileset
+             (backend (car fileset))
+             (files (nth 1 fileset)))
+        (if (eq backend 'Git)
+            (progn
+              (funcall fn files)
+              (message "%s %d file(s)." verb (length files)))
+          (message "Not in a VC Git buffer."))))
+
+    (defun emacs-solo/vc-git-add (&optional revision vc-fileset comment)
+      (interactive "P")
+      (emacs-solo/vc-git-command "Staged" 'vc-git-register))
+
+    (defun emacs-solo/vc-git-reset (&optional revision vc-fileset comment)
+      (interactive "P")
+      (emacs-solo/vc-git-command "Unstaged"
+                                 (lambda (files) (vc-git-command nil 0 files "reset" "-q" "--"))))
+
+
+    ;; Bind S and U in vc-dir-mode-map
+    (define-key vc-dir-mode-map (kbd "S") #'emacs-solo/vc-git-add)
+    (define-key vc-dir-mode-map (kbd "U") #'emacs-solo/vc-git-reset)
+
+    ;; Bind S and U in vc-prefix-map for general VC usage
+    (define-key vc-prefix-map (kbd "S") #'emacs-solo/vc-git-add)
+    (define-key vc-prefix-map (kbd "U") #'emacs-solo/vc-git-reset)
+
+    ;; Bind g to hide up to date files after refreshing in vc-dir
+    (define-key vc-dir-mode-map (kbd "g")
+                (lambda () (interactive) (vc-dir-refresh) (vc-dir-hide-up-to-date)))
+
+
+    (defun emacs-solo/vc-git-show-status ()
+      "Show the Git status of files in the `vc-log` buffer, prepended with '#'."
+      (interactive)
+      (let* ((fileset (vc-deduce-fileset t))
+             (backend (car fileset))
+             (files (nth 1 fileset)))
+        (if (eq backend 'Git)
+            (let ((output-buffer "*Git Status*")
+                  (status-output (shell-command-to-string "git status -v")))
+              (with-current-buffer (get-buffer-create output-buffer)
+                (read-only-mode -1)
+                (erase-buffer)
+                ;; Add '#' before each line
+                (dolist (line (split-string status-output "\n"))
+                  (insert (if (not (string-empty-p line)) (concat "# " line "\n") "\n")))
+                (pop-to-buffer output-buffer)))
+          (message "Not in a VC Git buffer."))))
+
+    ))
 
 ;;; SMERGE
 (use-package smerge-mode
