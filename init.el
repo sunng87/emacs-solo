@@ -720,6 +720,31 @@ Also first tries the local node_modules/.bin and later the global bin."
     (interactive)
     (set-frame-parameter (selected-frame) 'alpha '(100 100))))
 
+;;; EMACS-SOLO-DIMINISH
+;;
+;;  Custom functions to diminish modes from the mode-line
+;;
+(use-package emacs-solo-diminish
+  :ensure nil
+  :defer t
+  :init
+  (defvar emacs-solo-hidden-minor-modes
+    '(abbrev-mode
+      eldoc-mode
+      flyspell-mode
+      smooth-scroll-mode
+      outline-minor-mode
+      which-key-mode))
+
+  (defun emacs-solo/purge-minor-modes ()
+    (interactive)
+    (dolist (x emacs-solo-hidden-minor-modes nil)
+      (let ((trg (cdr (assoc x minor-mode-alist))))
+        (when trg
+          (setcar trg "")))))
+
+  (add-hook 'after-change-major-mode-hook 'emacs-solo/purge-minor-modes))
+
 ;;; EMACS-SOLO-EXEC-PATH-FROM-SHELL
 ;;
 ;;  Loads users default shell PATH settings into Emacs. Usefull
