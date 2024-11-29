@@ -1125,12 +1125,14 @@ A compound word includes letters, numbers, `-`, and `_`."
     "Greedly remove all git gutter marks and other overlays."
     (interactive)
     (remove-overlays)
+    (remove-hook 'after-change-functions #'emacs-solo/git-gutter-add-mark)
     (remove-hook 'pre-command-hook #'emacs-solo/git-gutter-add-mark)
     (remove-hook 'after-save-hook #'emacs-solo/git-gutter-add-mark))
 
   (defun emacs-solo/git-gutter-on ()
     (interactive)
     (emacs-solo/git-gutter-add-mark)
+    (add-hook 'after-change-functions #'emacs-solo/git-gutter-add-mark nil t)
     (add-hook 'pre-command-hook #'emacs-solo/git-gutter-add-mark)
     (add-hook 'after-save-hook #'emacs-solo/git-gutter-add-mark))
 
