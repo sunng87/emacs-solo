@@ -5,6 +5,11 @@
 ;;
 ;;; Code:
 
+;; Startup hacks
+(setq gc-cons-threshold most-positive-fixnum
+      jgc-cons-percentage 0.6
+      vc-handled-backends '(Git))
+
 ;; Hack to avoid being flashbanged
 (defun emacs-solo/avoid-initial-flash-of-light ()
   "Avoid flash of light when starting Emacs."
@@ -27,6 +32,13 @@
 (menu-bar-mode -1)
 (scroll-bar-mode -1)
 (tool-bar-mode -1)
+(tooltip-mode -1)
+
+;; Resizing the Emacs frame can be a terribly expensive part of changing the
+;; font. By inhibiting this, we easily halve startup times with fonts that are
+;; larger than the system default.
+(setq frame-inhibit-implied-resize t
+      frame-resize-pixelwise t)
 
 (provide 'early-init)
 ;;; early-init.el ends here
