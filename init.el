@@ -3,9 +3,6 @@
 
 ;;; Code:
 
-(setq gc-cons-threshold #x40000000)
-(setq read-process-output-max (* 1024 1024 4))
-
 ;;; EMACS
 (use-package emacs
   :ensure nil
