@@ -590,11 +590,10 @@ and restart Flymake to apply the changes."
   (setq modus-themes-common-palette-overrides modus-themes-preset-overrides-cooler)
 
   (ignore-errors
-    (load-theme 'modus-vivendi))
+    (load-theme 'modus-vivendi-tinted))
   :init
   (ignore-errors
-    (load-theme 'modus-vivendi)))
-
+    (load-theme 'modus-vivendi-tinted)))
 
 ;;; EMACS-SOLO-HOOKS
 ;;
@@ -627,7 +626,6 @@ and restart Flymake to apply the changes."
     (outline-hide-sublevels 1))
 
   (add-hook 'emacs-lisp-mode-hook #'emacs-solo/elisp-mode-hook))
-
 
 ;;; EMACS-SOLO-MOVEMENTS
 ;;
