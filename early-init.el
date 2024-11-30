@@ -7,7 +7,7 @@
 
 ;; Startup hacks
 (setq gc-cons-threshold most-positive-fixnum
-      jgc-cons-percentage 0.6
+      gc-cons-percentage 0.6
       vc-handled-backends '(Git))
 
 ;; Hack to avoid being flashbanged
@@ -17,7 +17,7 @@
   ;; These colors should match your selected theme for maximum effect
   ;; Note that for catppuccin whenever we create a new frame or open it on terminal
   ;; it is necessary to reload the theme.
-  (set-face-attribute 'default nil :background "#000000"))
+  (set-face-attribute 'default nil :background "#292D3E"))
 
 (emacs-solo/avoid-initial-flash-of-light)
 
