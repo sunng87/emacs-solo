@@ -224,6 +224,7 @@
                                (eshell-send-input)))))
 
   (require 'vc)
+  (require 'vc-git)
   (setq eshell-prompt-function
         (lambda ()
           (concat
@@ -242,10 +243,29 @@
                        (concat "..." (car (last (butlast (split-string (eshell/pwd) "/") 0))))
                      (abbreviate-file-name (eshell/pwd))))
            ")\n"
-           (if (car (vc-git-branches))
-               (concat
-                "├─(ᚶ " (car (vc-git-branches)) ")\n"
-                ))
+
+           (when (and (fboundp 'vc-git-root) (vc-git-root default-directory))
+             (concat
+              "├─(🌿 " (car (vc-git-branches))
+              (let* ((branch (car (vc-git-branches)))
+                     (behind (string-to-number
+                              (shell-command-to-string
+                               (concat "git rev-list --count HEAD..origin/" branch)))))
+                (if (> behind 0)
+                    (concat "  ⬇️ " (number-to-string behind))))
+
+              (let ((modified (length (split-string
+                                       (shell-command-to-string
+                                        "git ls-files --modified") "\n" t)))
+                    (untracked (length (split-string
+                                        (shell-command-to-string
+                                         "git ls-files --others --exclude-standard") "\n" t))))
+                (concat
+                 (if (> modified 0)
+                     (concat "  ✏️ " (number-to-string modified)))
+                 (if (> untracked 0)
+                     (concat "  📄 " ))))
+              ")\n"))
            "└─➜ ")))
 
   (setq eshell-prompt-regexp "└─➜ ")
