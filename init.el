@@ -984,9 +984,9 @@ The deleted text is saved to the kill ring."
         (progn
           (pulse-momentary-highlight-region (region-beginning) (region-end))
           (run-at-time 0.1 nil 'kill-region (region-beginning) (region-end)))
-      ;; Otherwise, delete the current line
-      (pulse-momentary-highlight-region (line-beginning-position) (line-end-position))
-      (run-at-time 0.1 nil 'kill-region (line-beginning-position) (line-end-position 2))))
+      ;; Otherwise, delete the current line including its newline character
+      (pulse-momentary-highlight-region (line-beginning-position) (line-beginning-position 2))
+      (run-at-time 0.1 nil 'kill-region (line-beginning-position) (line-beginning-position 2))))
 
   (defun viper-yank-line-or-region ()
     "Yank the current line or the selected region and highlight the region."
