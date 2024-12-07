@@ -475,6 +475,47 @@ and restart Flymake to apply the changes."
   :defer t
   :hook (before-save . whitespace-cleanup))
 
+;;; GNUS
+(use-package gnus
+  :ensure nil
+  :defer t
+  :custom
+  (gnus-init-file (concat user-emacs-directory ".gnus.el"))
+  (gnus-startup-file (concat user-emacs-directory ".newsrc"))
+  (gnus-init-file (concat user-emacs-directory ".newsrc.eld"))
+  (gnus-activate-level 3)
+  (gnus-message-archive-group nil)
+  (gnus-check-new-newsgroups nil)
+  (gnus-check-bogus-newsgroups nil)
+  (gnus-show-threads nil)
+  (gnus-use-cross-reference nil)
+  (gnus-nov-is-evil nil)
+  (gnus-group-line-format "%1M%5y  : %(%-50,50G%)\12")
+  (gnus-logo-colors '("#2fdbde" "#c0c0c0"))
+  (gnus-permanently-visible-groups ".*")
+  (gnus-summary-insert-entire-threads t)
+  (gnus-thread-sort-functions
+   '(gnus-thread-sort-by-most-recent-number
+     gnus-thread-sort-by-subject
+     (not gnus-thread-sort-by-total-score)
+     gnus-thread-sort-by-most-recent-date))
+  (gnus-summary-line-format "%U%R%z: %[%d%] %4{ %-34,34n%} %3{  %}%(%1{%B%}%s%)\12")
+  (gnus-user-date-format-alist '((t . "%d-%m-%Y %H:%M")))
+  (gnus-summary-thread-gathering-function 'gnus-gather-threads-by-references)
+  (gnus-sum--tree-indent " ")
+  (gnus-sum-thread-tree-indent " ")
+  (gnus-sum-thread-tree-false-root "○ ")
+  (gnus-sum-thread-tree-single-indent "◎ ")
+  (gnus-sum-thread-tree-leaf-with-other "├► ")
+  (gnus-sum-thread-tree-root "● ")
+  (gnus-sum-thread-tree-single-leaf "╰► ")
+  (gnus-sum-thread-tree-vertical "│)")
+  (gnus-select-method '(nnnil nil))
+  (gnus-ignored-newsgroups "^to\\.\\|^[0-9. ]+\\( \\|$\\)\\|^[\"]\"[#'()]")
+  (gnus-secondary-select-methods
+   '((nntp "news.gwene.org"))))
+
+
 ;;; PROCED
 (use-package proced
   :ensure nil
