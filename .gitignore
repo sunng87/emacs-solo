@@ -56,3 +56,8 @@ gnus.el
 history
 viper
 custom-vars.el
+.gnus.el
+.newsrc
+.newsrc-dribble
+.newsrc.eld
+.nrewsrc.eld
