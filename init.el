@@ -577,6 +577,47 @@ and restart Flymake to apply the changes."
   (setq which-key-add-column-padding 1)
   (setq which-key-max-description-length 40))
 
+;;; WEBJUMP
+(use-package webjump
+  :defer t
+  :ensure nil
+  :bind ("C-x /" . webjump)
+  :custom
+  (webjump-sited (("GNU Project FTP Archive"
+    . [mirrors "https://ftp.gnu.org/pub/gnu/"
+               "https://ftpmirror.gnu.org"])
+   ("GNU Project Website" . "www.gnu.org")
+   ("Emacs Website" . "www.gnu.org/software/emacs/emacs.html")
+   ("Savannah Emacs page" . "savannah.gnu.org/projects/emacs")
+   ("Emacs Lisp List" . "www.damtp.cam.ac.uk/user/eglen/emacs/ell.html")
+   ("Emacs Wiki"
+    . [simple-query "www.emacswiki.org"
+                    "www.emacswiki.org/cgi-bin/wiki/" #1=""])
+   ("DuckDuckGo"
+    . [simple-query "duckduckgo.com" "duckduckgo.com/?q=" #1#])
+   ("Google Groups"
+    . [simple-query "groups.google.com" "groups.google.com/groups?q=" #1#])
+   ("Yahoo"
+    . [simple-query "www.yahoo.com" "search.yahoo.com/search?p=" #1#])
+   ("Yahoo: Reference" . "www.yahoo.com/Reference/")
+   ("Wikipedia"
+    . [simple-query "wikipedia.org" "wikipedia.org/wiki/" #1#])
+   ("National Weather Service" . webjump-to-iwin)
+   ("Usenet FAQs" . "http://www.faqs.org/faqs/")
+   ("RTFM Usenet FAQs by Group"
+    . "ftp://rtfm.mit.edu/pub/usenet-by-group/")
+   ("RTFM Usenet FAQs by Hierarchy"
+    . "ftp://rtfm.mit.edu/pub/usenet-by-hierarchy/")
+   ("X Consortium Archive" . "ftp.x.org")
+   ("Association for Computing Machinery" . "www.acm.org")
+   ("Computer Professionals for Social Responsibility"
+    . "http://www.cpsr.org")
+   ("Electronic Frontier Foundation" . "www.eff.org")
+   ("IEEE Computer Society" . "www.computer.org")
+   ("Risks Digest" . webjump-to-risks)
+   ("Supplemental Web site list for webjump"
+    . "www.neilvandyke.org/webjump/"))))
+
 ;;; RUBY-TS-MODE
 (use-package ruby-ts-mode
   :ensure nil
