@@ -3,6 +3,7 @@
 
 ;;; Code:
 
+;;; -------------------- GENERAL EMACS CONFIG
 ;;; EMACS
 (use-package emacs
   :ensure nil
@@ -10,7 +11,8 @@
   (("M-o" . other-window)
    ("C-x C-b" . ibuffer))
   :custom
-  (column-number-mode t)
+  (column-number-mode nil)
+  (line-number-mode nil)
   (completion-ignore-case t)
   (completions-detailed t)
   (completions-format 'one-column)
