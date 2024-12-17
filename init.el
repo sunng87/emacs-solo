@@ -50,7 +50,16 @@
 
   (add-hook 'prog-mode-hook #'display-line-numbers-mode)
 
+  ;; Add option "d" to whenever using C-x s or C-x C-c, allowing a quick preview
+  ;; of the diff of what you're asked to save.
+  (add-to-list 'save-some-buffers-action-alist
+               (list "d"
+                     (lambda (buffer) (diff-buffer-with-file (buffer-file-name buffer)))
+                     "show diff between the buffer and its file"))
+
   :init
+  (set-window-margins (selected-window) 1 0)
+
   (toggle-frame-maximized)
   (select-frame-set-input-focus (selected-frame))
   (global-auto-revert-mode 1)
