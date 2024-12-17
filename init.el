@@ -106,10 +106,10 @@
       (side . bottom)
       (slot . 0))
      ("\\*\\([Hh]elp\\)\\*"
-        (display-buffer-in-side-window)
-        (window-width . 75)
-        (side . right)
-        (slot . 0))
+      (display-buffer-in-side-window)
+      (window-width . 75)
+      (side . right)
+      (slot . 0))
      ("\\*\\(Flymake diagnostics\\|xref\\|Completions\\)"
       (display-buffer-in-side-window)
       (window-height . 0.25)
