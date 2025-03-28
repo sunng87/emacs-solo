@@ -13,7 +13,7 @@
         source = builtins.path { path = ./init.el; };
       };
       home.file.".emacs.d/early-init.el" = {
-        source = builtins.path { path = ./init-early.el; };
+        source = builtins.path { path = ./early-init.el; };
       };
     };
   };
