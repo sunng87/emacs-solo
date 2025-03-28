@@ -10,10 +10,10 @@
     homeManagerModules.emacs = { pkgs, ... }: {
       home.packages = [ pkgs.emacs ];  # Ensure Emacs is installed
       home.file.".emacs.d/init.el" = {
-        source = "./init.el";
+        source = builtins.path { path = ./init.el; };
       };
       home.file.".emacs.d/early-init.el" = {
-        source = "./early-init.el";
+        source = builtins.path { path = ./init-early.el; };
       };
     };
   };
