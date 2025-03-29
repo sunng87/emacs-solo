@@ -7,10 +7,9 @@
   };
 
   outputs = { self, nixpkgs, home-manager, ... }: {
-    homeManagerModules.emacs = { pkgs, lib, ... }: {
-      # Add emacs only if not already present
-      home.packages = [ (lib.mkDefault pkgs.emacs) ];
-
+    homeManagerModules.emacs = { pkgs, lib, config, ... }: {
+      # This will work alongside home-manager's programs.emacs
+      # Just providing the config files
       home.file.".emacs.d/init.el" = {
         source = builtins.path { path = ./init.el; };
       };
