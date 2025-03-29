@@ -8,12 +8,20 @@
 
   outputs = { self, nixpkgs, home-manager, ... }: {
     homeManagerModules.emacs = { pkgs, ... }: {
-      home.packages = [ pkgs.emacs ];  # Ensure Emacs is installed
-      home.file.".emacs.d/init.el" = {
-        source = builtins.path { path = ./init.el; };
-      };
-      home.file.".emacs.d/early-init.el" = {
-        source = builtins.path { path = ./early-init.el; };
+      let hasEmacs = lib.any (pkg: lib.getName pkg == "emacs" || lib.hasPrefix "emacs-" (lib.getName pkg))
+        (config.home.packages or []);
+      in {
+        # Add emacs only if not already present
+        home.packages = lib.mkIf (!hasEmacs) [
+          (lib.mkDefault pkgs.emacs)  # Default to `emacs`, but allow override
+        ];
+
+        home.file.".emacs.d/init.el" = {
+          source = builtins.path { path = ./init.el; };
+        };
+        home.file.".emacs.d/early-init.el" = {
+          source = builtins.path { path = ./early-init.el; };
+        };
       };
     };
   };
