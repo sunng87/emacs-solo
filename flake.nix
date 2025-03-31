@@ -1,21 +1,32 @@
 {
-  description = "Emacs solo nix flake";
+  description = "Emacs Solo: Always-overwrite config";
 
-  inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    home-manager.url = "github:nix-community/home-manager";
-  };
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
-  outputs = { self, nixpkgs, home-manager, ... }: {
-    homeManagerModules.emacs = { pkgs, lib, config, ... }: {
-      # This will work alongside home-manager's programs.emacs
-      # Just providing the config files
-      home.file.".emacs.d/init.el" = {
-        source = builtins.path { path = ./init.el; };
+  outputs = { self, nixpkgs, ... }: let
+    system = "x86_64-linux";  # Adjust as needed
+    pkgs = nixpkgs.legacyPackages.${system};
+  in {
+    packages.${system} = {
+      emacs-solo = pkgs.stdenv.mkDerivation {
+        name = "emacs-solo";
+        src = ./.;
+
+        installPhase = ''
+          mkdir -p $out/bin
+          cat > $out/bin/emacs-solo <<EOF
+          #!/bin/sh
+          # Force-copy latest init.el to ~/.emacs-solo/
+          mkdir -p "\$HOME/.emacs-solo"
+          cp ${./init.el} "\$HOME/.emacs-solo/init.el"
+          cp ${./early-init.el} "\$HOME/.emacs-solo/early-init.el"
+          # Launch
+          exec ${pkgs.emacs}/bin/emacs --init-directory="\$HOME/.emacs-solo" "\$@"
+          EOF
+          chmod +x $out/bin/emacs-solo
+        '';
       };
-      home.file.".emacs.d/early-init.el" = {
-        source = builtins.path { path = ./early-init.el; };
-      };
+      default = self.packages.${system}.emacs-solo;
     };
   };
 }
