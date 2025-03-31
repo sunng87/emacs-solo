@@ -146,6 +146,29 @@ Emacs initializes.
 
 Of course, you can also fork it! (please do 😊)
 
+*** Installation as Nix Flake Module
+
+The fork includes Nix Flake for Emacs Solo, which allows you to install it as a
+home-manager module. To use it in your home manager flake,
+
+Add this to your home-manager flake inputs:
+
+#+BEGIN_SRC nix
+  emacs-solo.url = "github:sunng87/emacs-solo";
+#+END_SRC
+
+And in the output, include this in your home manager modules:
+
+#+BEGIN_SRC nix
+  emacs-solo.homeManagerModules.default
+#+END_SRC
+
+** External Dependencies
+- ripgrep (for quick project grep and xref)
+- gls (macos only)
+- curl (for 0x0)
+- mpv (for newsticker)
+
 ** How do I...
 A FAQ like session of common questions of how to do X with only Emacs Solo.
 #+html:<details>
