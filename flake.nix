@@ -16,8 +16,8 @@
         (pkgs.writeShellScriptBin "emacs-solo" ''
           # Force-copy configs to ~/.emacs-solo/
           mkdir -p "$HOME/.emacs-solo"
-          cp ${./init.el} "$HOME/.emacs-solo/init.el"
-          cp ${./early-init.el} "$HOME/.emacs-solo/early-init.el"
+          cat ${./init.el} > "$HOME/.emacs-solo/init.el"
+          cat ${./early-init.el} > "$HOME/.emacs-solo/early-init.el"
           # Launch
           exec ${pkgs.emacs}/bin/emacs --init-directory="$HOME/.emacs-solo" "$@"
         '')
