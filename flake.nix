@@ -1,24 +1,21 @@
 {
-  description = "Barebones emacs-solo for Home Manager";
+  description = "emacs-solo: the standalone emacs setup";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     home-manager.url = "github:nix-community/home-manager";
   };
 
-  outputs = { self, nixpkgs, home-manager, ... }@inputs: let
-    system = "x86_64-linux";  # Change if needed
+  outputs = { self, nixpkgs, home-manager, ... }: let
+    system = "x86_64-linux";
     pkgs = nixpkgs.legacyPackages.${system};
   in {
-    # Home Manager module
-    homeManagerModules.default = { config, pkgs, ... }: {
+    homeManagerModules.default = { pkgs, lib, ... }: {
+      home.file.".emacs-solo/init.el".source = ./init.el;
+      home.file.".emacs-solo/early-init.el".source = ./early-init.el;
+
       home.packages = [
-        (pkgs.writeShellScriptBin "emacs-solo" ''
-          # Force-copy configs to ~/.emacs-solo/
-          mkdir -p "$HOME/.emacs-solo"
-          cat ${./init.el} > "$HOME/.emacs-solo/init.el"
-          cat ${./early-init.el} > "$HOME/.emacs-solo/early-init.el"
-          # Launch
+        (pkgs.writeShellScriptBin "e" ''
           exec ${pkgs.emacs}/bin/emacs --init-directory="$HOME/.emacs-solo" "$@"
         '')
       ];
