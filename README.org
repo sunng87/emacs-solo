@@ -45,6 +45,23 @@ issue the same command as above
 
 And that's it, happy hacking! 🐂
 
+*** Installation as Nix Flake Module
+
+The fork includes Nix Flake for Emacs Solo, which allows you to install it as a
+home-manager module. To use it in your home manager flake,
+
+Add this to your home-manager flake inputs:
+
+#+BEGIN_SRC nix
+  emacs-solo.url = "github:sunng87/emacs-solo";
+#+END_SRC
+
+And in the output, include this in your home manager modules:
+
+#+BEGIN_SRC nix
+  emacs-solo.homeManagerModules.default
+#+END_SRC
+
 ** External Dependencies
 - ripgrep (for quick project grep and xref)
 - gls (macos only)
