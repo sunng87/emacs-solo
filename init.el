@@ -2718,7 +2718,7 @@ you can later apply as a patch after reviewing the changes."
   :no-require t
   :defer t
   :init
-  (setq emacs-solo-weather-city "Beijing")
+  (setq emacs-solo-weather-city "Indaiatuba")
 
   (defun emacs-solo/weather-buffer ()
     "Open a new Emacs buffer and asynchronously fetch wttr.in weather data."
