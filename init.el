@@ -22,6 +22,7 @@
    ("M-j" . duplicate-dwim)
    ("M-g r" . recentf)
    ("M-s g" . grep)
+   ("C-x ;" . comment-line)
    ("M-s f" . find-name-dired)
    ("C-x C-b" . ibuffer)
    ("C-x w t"  . transpose-window-layout)            ; EMACS-31
@@ -84,9 +85,6 @@
   (switch-to-buffer-obey-display-actions t)
   (tab-always-indent 'complete)
   (tab-width 4)
-  (tab-bar-close-button-show nil)
-  (tab-bar-new-button-show nil)
-  (tab-bar-tab-hints t)
   (treesit-font-lock-level 4)
   (truncate-lines t)
   (undo-limit (* 13 160000))
@@ -94,11 +92,13 @@
   (undo-outer-limit (* 13 24000000))
   (use-dialog-box nil)
   (use-file-dialog nil)
+  (use-package-hook-name-suffix nil)
   (use-short-answers t)
   (visible-bell nil)
   (window-combination-resize t)
   (window-resize-pixelwise nil)
   (xref-search-program 'ripgrep)
+  (zone-programs '[zone-pgm-rat-race])
   (grep-command "rg -nS --no-heading ")
   (grep-find-ignored-directories
    '("SCCS" "RCS" "CVS" "MCVS" ".src" ".svn" ".git" ".hg" ".bzr" "_MTN" "_darcs" "{arch}" "node_modules" "build" "dist"))
@@ -187,7 +187,6 @@
   (toggle-frame-maximized)
   (select-frame-set-input-focus (selected-frame))
   (global-auto-revert-mode 1)
-  (indent-tabs-mode -1)
   (recentf-mode 1)
   (repeat-mode 1)
   (savehist-mode 1)
@@ -293,6 +292,26 @@
      )))
 
 
+;;; TAB-BAR
+(use-package tab-bar
+  :ensure nil
+  :defer t
+  :custom
+  (tab-bar-close-button-show nil)
+  (tab-bar-new-button-show nil)
+  (tab-bar-tab-hints t)
+  (tab-bar-auto-width t)
+  (tab-bar-auto-width-min '(10 4))
+  (tab-bar-auto-width-max '(50 5))
+  :init
+  ;; HACK this is an override of the internal function so it
+  ;;      shows only the hint number with some decoration.
+  (defun tab-bar-tab-name-format-hints (name _tab i)
+    "Show absolute numbers on tabs in the tab bar before the tab name.
+It has effect when `tab-bar-tab-hints' is non-nil."
+    (if tab-bar-tab-hints (concat (format " »%d«" i) "") name)))
+
+
 ;;; RCIRC
 (use-package rcirc
   :ensure nil
@@ -351,9 +370,9 @@
               ("RET" . icomplete-force-complete-and-exit)
               ("C-j" . exit-minibuffer)) ;; So we can exit commands like `multi-file-replace-regexp-as-diff'
   :hook
-  (after-init . (lambda ()
-                  (fido-mode -1)
-                  (icomplete-vertical-mode 1)))
+  (after-init-hook . (lambda ()
+                       (fido-mode -1)
+                       (icomplete-vertical-mode 1)))
   :config
   (setq icomplete-delay-completions-threshold 0)
   (setq icomplete-compute-delay 0)
@@ -370,11 +389,11 @@
   (when (and (>= emacs-major-version 31)
              (boundp 'icomplete-vertical-in-buffer-adjust-list))
 
-             (setq icomplete-vertical-in-buffer-adjust-list t)
-             (setq icomplete-vertical-render-prefix-indicator t)
-             ;; (setq icomplete-vertical-selected-prefix-indicator   " @ ")
-             ;; (setq icomplete-vertical-unselected-prefix-indicator "   ")
-             )
+    (setq icomplete-vertical-in-buffer-adjust-list t)
+    (setq icomplete-vertical-render-prefix-indicator t)
+    ;; (setq icomplete-vertical-selected-prefix-indicator   " @ ")
+    ;; (setq icomplete-vertical-unselected-prefix-indicator "   ")
+    )
 
   (if icomplete-in-buffer
       (advice-add 'completion-at-point
@@ -671,14 +690,16 @@ away from the bottom.  Counts wrapped lines as real lines."
         (concat " \n"
                 (cl-loop for l in lines repeat total-space concat l concat "\n")))))
 
-;; end use-package
-)
+  ;; end use-package
+  )
 
 ;;; DIRED
 (use-package dired
   :ensure nil
   :bind
   (("M-i" . emacs-solo/window-dired-vc-root-left))
+  (:map dired-mode-map
+        ("-" . dired-up-directory))
   :custom
   (dired-dwim-target t)
   (dired-guess-shell-alist-user
@@ -686,48 +707,76 @@ away from the bottom.  Counts wrapped lines as real lines."
      ("\\.\\(mp[34]\\|m4a\\|ogg\\|flac\\|webm\\|mkv\\)" "mpv" "xdg-open" "open")
      (".*" "xdg-open" "open")))
   (dired-kill-when-opening-new-dired-buffer t)
-  (dired-listing-switches "-al --group-directories-first")
+  (dired-listing-switches "-alh --group-directories-first")
   (dired-omit-files "^\\.")                                ; with dired-omit-mode (C-x M-o)
   (dired-hide-details-hide-absolute-location t)            ; EMACS-31
   :init
   (add-hook 'dired-mode-hook (lambda () (dired-omit-mode 1))) ;; Turning this ON also sets the C-x M-o binding.
 
   (defun emacs-solo/dired-rsync-copy (dest)
-  "Copy marked files in Dired to DEST using rsync async, with real-time processing of output."
-  (interactive
-   (list (expand-file-name (read-file-name "rsync to: "
-                                           (dired-dwim-target-directory)))))
-  (let* ((files (dired-get-marked-files nil current-prefix-arg))
-         (command (append '("rsync" "-hPur") (mapcar #'shell-quote-argument files) (list (shell-quote-argument dest))))
-         (buffer (get-buffer-create "*rsync*")))
-    (with-current-buffer buffer
-      (erase-buffer)
-      (insert "Running rsync...\n"))
+    "Copy marked files in Dired to DEST using rsync async, with real-time processing of output."
+    (interactive
+     (list (expand-file-name (read-file-name "rsync to: "
+                                             (dired-dwim-target-directory)))))
+    (let* ((files (dired-get-marked-files nil current-prefix-arg))
+           (dest-original dest)
+           (dest-rsync
+            (if (file-remote-p dest)
+                (let ((vec (tramp-dissect-file-name dest)))
+                  (concat (tramp-file-name-user vec)
+                          "@"
+                          (tramp-file-name-host vec)
+                          ":"
+                          (tramp-file-name-localname vec)))
+              dest))
+           (files-rsync
+            (mapcar
+             (lambda (f)
+               (if (file-remote-p f)
+                   (let ((vec (tramp-dissect-file-name f)))
+                     (concat (tramp-file-name-user vec)
+                             "@"
+                             (tramp-file-name-host vec)
+                             ":"
+                             (tramp-file-name-localname vec)))
+                 f))
+             files))
+           (command (append '("rsync" "-hPur") files-rsync (list dest-rsync)))
+           (buffer (get-buffer-create "*rsync*")))
 
-    (defun rsync-process-filter (proc string)
-      (with-current-buffer (process-buffer proc)
-        (goto-char (point-max))
-        (insert string)
-        (goto-char (point-max))
-        (while (re-search-backward "\r" nil t)
-          (replace-match "\n" nil nil))))
+      (message "[rsync] original dest: %s" dest-original)
+      (message "[rsync] converted dest: %s" dest-rsync)
+      (message "[rsync] source files: %s" files-rsync)
+      (message "[rsync] command: %s" (string-join command " "))
 
-    (make-process
-     :name "dired-rsync"
-     :buffer buffer
-     :command command
-     :filter 'rsync-process-filter
-     :sentinel
-     (lambda (_proc event)
-       (when (string-match-p "finished" event)
-         (with-current-buffer buffer
-           (goto-char (point-max))
-           (insert "\n* rsync done *\n"))
-         (dired-revert)))
-     :stderr buffer)
+      (with-current-buffer buffer
+        (erase-buffer)
+        (insert "Running rsync...\n"))
 
-    (display-buffer buffer)
-    (message "rsync started...")))
+      (defun rsync-process-filter (proc string)
+        (with-current-buffer (process-buffer proc)
+          (goto-char (point-max))
+          (insert string)
+          (goto-char (point-max))
+          (while (re-search-backward "\r" nil t)
+            (replace-match "\n" nil nil))))
+
+      (make-process
+       :name "dired-rsync"
+       :buffer buffer
+       :command command
+       :filter 'rsync-process-filter
+       :sentinel
+       (lambda (_proc event)
+         (when (string-match-p "finished" event)
+           (with-current-buffer buffer
+             (goto-char (point-max))
+             (insert "\n* rsync done *\n"))
+           (dired-revert)))
+       :stderr buffer)
+
+      (display-buffer buffer)
+      (message "rsync started...")))
 
 
   (defun emacs-solo/window-dired-vc-root-left (&optional directory-path)
@@ -737,24 +786,24 @@ away from the bottom.  Counts wrapped lines as real lines."
 
     (let ((dir (if directory-path
                    (dired-noselect directory-path)
-         (if (eq (vc-root-dir) nil)
+                 (if (eq (vc-root-dir) nil)
                      (dired-noselect default-directory)
                    (dired-noselect (vc-root-dir))))))
 
       (display-buffer-in-side-window
        dir `((side . left)
-         (slot . 0)
-         (window-width . 30)
-         (window-parameters . ((no-other-window . t)
-                   (no-delete-other-windows . t)
-                   (mode-line-format . (" "
-                            "%b"))))))
+             (slot . 0)
+             (window-width . 30)
+             (window-parameters . ((no-other-window . t)
+                                   (no-delete-other-windows . t)
+                                   (mode-line-format . (" "
+                                                        "%b"))))))
       (with-current-buffer dir
-    (let ((window (get-buffer-window dir)))
+        (let ((window (get-buffer-window dir)))
           (when window
             (select-window window)
-        (rename-buffer "*Dired-Side*")
-        )))))
+            (rename-buffer "*Dired-Side*")
+            )))))
 
   (defun emacs-solo/window-dired-open-directory ()
     "Open the current directory in *Dired-Side* side window."
@@ -762,8 +811,8 @@ away from the bottom.  Counts wrapped lines as real lines."
     (emacs-solo/window-dired-vc-root-left (dired-get-file-for-visit)))
 
   (eval-after-load 'dired
-  '(progn
-     (define-key dired-mode-map (kbd "C-<return>") 'emacs-solo/window-dired-open-directory))))
+    '(progn
+       (define-key dired-mode-map (kbd "C-<return>") 'emacs-solo/window-dired-open-directory))))
 
 
 ;;; WDIRED
@@ -782,9 +831,33 @@ away from the bottom.  Counts wrapped lines as real lines."
   (("C-c e" . eshell))
   :defer t
   :config
+  (setopt eshell-banner-message
+          (concat
+           (propertize " ✨ Welcome to the Emacs Solo Shell ✨\n\n" 'face '(:weight bold :foreground "#f9e2af"))
+           (propertize " C-c t" 'face '(:foreground "#89b4fa" :weight bold)) " - toggles between prompts\n"
+           (propertize " C-c l" 'face '(:foreground "#89b4fa" :weight bold)) " - searches history\n"
+           (propertize " C-l  " 'face '(:foreground "#89b4fa" :weight bold)) " - clears scrolling\n\n"))
+
+
+  ;; DISABLE SCROLLING CONSERVATIVELY ON ESHELL
+  ;;
+  (defun emacs-solo/reset-scrolling-vars-for-term ()
+    "Locally reset scrolling behavior in term-like buffers."
+    (setq-local scroll-conservatively 0)
+    (setq-local scroll-margin 0))
+  (add-hook 'term-mode-hook #'emacs-solo/reset-scrolling-vars-for-term)
+  (add-hook 'eshell-mode-hook #'emacs-solo/reset-scrolling-vars-for-term)
+
+
+  ;; MAKES C-c l GIVE AN ICOMPLETE LIKE SEARCH TO HISTORY COMMANDS
+  ;;
   (defun emacs-solo/eshell-pick-history ()
-    "Show Eshell history in a completing-read picker and insert the selected command."
+    "Show Eshell history combining memory and file persistence."
     (interactive)
+    ;; Write current session's history to file so it's always fresh
+    (when (bound-and-true-p eshell-history-ring)
+      (eshell-write-history))
+    ;; Then read the history from file
     (let* ((history-file (expand-file-name "eshell/history" user-emacs-directory))
            (history-entries (when (file-exists-p history-file)
                               (with-temp-buffer
@@ -795,6 +868,8 @@ away from the bottom.  Counts wrapped lines as real lines."
         (insert selection))))
 
 
+  ;; GIVES SYNTAX HIGHLIGHTING TO CAT
+  ;;
   (defun eshell/cat-with-syntax-highlighting (filename)
     "Like cat(1) but with syntax highlighting.
   Stole from aweshell"
@@ -815,70 +890,156 @@ away from the bottom.  Counts wrapped lines as real lines."
   (advice-add 'eshell/cat :override #'eshell/cat-with-syntax-highlighting)
 
 
+  ;; LOCAL ESHELL BINDINGS
+  ;;
   (add-hook 'eshell-mode-hook
             (lambda ()
               (local-set-key (kbd "C-c l") #'emacs-solo/eshell-pick-history)
+              (local-set-key (kbd "C-c t") #'emacs-solo/toggle-eshell-prompt)
               (local-set-key (kbd "C-l")
                              (lambda ()
                                (interactive)
-                               (eshell/clear 1)
-                               (eshell-send-input)))))
+                               (eshell/clear 1)))))
 
+
+  ;; CUSTOM ESHELL PROMPT
+  ;;
   (require 'vc)
   (require 'vc-git)
+
+  (defvar emacs-solo/eshell-full-prompt t
+    "When non-nil, show the full Eshell prompt. When nil, show minimal prompt.")
+
+  (defvar emacs-solo/eshell-lambda-symbol "𝛌  "
+    "Symbol used for the minimal Eshell prompt.")
+
+  (defun emacs-solo/toggle-eshell-prompt ()
+    "Toggle between full and minimal Eshell prompt."
+    (interactive)
+    (setq emacs-solo/eshell-full-prompt (not emacs-solo/eshell-full-prompt))
+    (message "Eshell prompt: %s"
+             (if emacs-solo/eshell-full-prompt "full" "minimal"))
+    (when (derived-mode-p 'eshell-mode)
+      (eshell-reset)))
+
   (setopt eshell-prompt-function
-        (lambda ()
-          (concat
-           "┌─("
-           (if (> eshell-last-command-status 0)
-               "❌"
-             "🐂")
-           " " (number-to-string eshell-last-command-status)
-           ")──("
-           "🧘 " (or (file-remote-p default-directory 'user) (user-login-name))
-           ")──("
-           "💻 " (or (file-remote-p default-directory 'host) (system-name))
-           ")──("
-           "🕝 " (format-time-string "%H:%M:%S" (current-time))
-           ")──("
-           "📁 "
-           (concat (if (>= (length (eshell/pwd)) 40)
-                       (concat "..." (car (last (butlast (split-string (eshell/pwd) "/") 0))))
-                     (abbreviate-file-name (eshell/pwd))))
-           ")\n"
-
-           (when (and (fboundp 'vc-git-root) (vc-git-root default-directory))
-             (concat
-              "├─(🌿 " (car (vc-git-branches))
-              (let* ((branch (car (vc-git-branches)))
-                     (behind (string-to-number
-                              (shell-command-to-string
-                               (concat "git rev-list --count HEAD..origin/" branch)))))
-                (if (> behind 0)
-                    (concat "  ⬇️ " (number-to-string behind))))
-
-              (let ((modified (length (split-string
-                                       (shell-command-to-string
-                                        "git ls-files --modified") "\n" t)))
-                    (untracked (length (split-string
-                                        (shell-command-to-string
-                                         "git ls-files --others --exclude-standard") "\n" t))))
+          (lambda ()
+            (if emacs-solo/eshell-full-prompt
+                ;; Full-blown prompt
                 (concat
-                 (if (> modified 0)
-                     (concat "  ✏️ " (number-to-string modified)))
-                 (if (> untracked 0)
-                     (concat "  📄 " ))))
-              ")\n"))
-           "└─➜ ")))
+                 (propertize "" 'face `(:foreground "#212234"))
 
-  (setq eshell-prompt-regexp "└─➜ ")
+                 (propertize
+                  (if (> eshell-last-command-status 0) " 🔴 " " 🟢 ")
+                  'face `(:background "#212234"))
 
+                 (propertize (concat (number-to-string eshell-last-command-status) " ")
+                             'face `(:background "#212234"))
+
+                 (propertize "" 'face `(:foreground "#212234" :background "#45475A"))
+
+                 (propertize
+                  (let ((remote-user (file-remote-p default-directory 'user))
+                        (is-remote (file-remote-p default-directory)))
+                    (concat
+                     (if is-remote "👽 " "🧙 ")
+                     (or remote-user (user-login-name))
+                     " "))
+                  'face `(:foreground "#89b4fa" :background "#45475A"))
+
+                 (propertize "" 'face `(:foreground "#45475A" :background "#212234"))
+
+                 (let ((remote-host (file-remote-p default-directory 'host))
+                       (is-remote (file-remote-p default-directory)))
+                   (propertize
+                    (concat (if is-remote " 🌐 " " 💻 ")
+                            (or remote-host (system-name))
+                            " ")
+                    'face `(:background "#212234" :foreground "#b4befe")))
+
+                 (propertize "" 'face `(:foreground "#212234" :background "#45475A"))
+
+                 (propertize
+                  (concat " 🕒 " (format-time-string "%H:%M:%S" (current-time)) " ")
+                  'face `(:foreground "#89b4fa" :background "#45475A"))
+
+                 (propertize "" 'face `(:foreground "#45475A" :background "#212234"))
+
+                 (propertize
+                  (concat " 📁 " (if (>= (length (eshell/pwd)) 40)
+                                     (concat "…" (car (last (butlast (split-string (eshell/pwd) "/") 0))))
+                                   (abbreviate-file-name (eshell/pwd))) " ")
+                  'face `(:background "#212234" :foreground "#A6E3A1"))
+
+                 (propertize "\n" 'face `(:foreground "#212234"))
+
+                 (when (and (fboundp 'vc-git-root) (vc-git-root default-directory))
+                   (concat
+                    (propertize "" 'face `(:foreground "#212234"))
+                    (propertize
+                     (concat
+                      " 🌿 " (car (vc-git-branches))
+                      (let* ((branch (car (vc-git-branches)))
+                             (behind (string-to-number
+                                      (shell-command-to-string
+                                       (format "git rev-list --count origin/%s..HEAD" branch))))
+                             (ahead (string-to-number
+                                     (shell-command-to-string
+                                      (format "git rev-list --count HEAD..origin/%s" branch)))))
+                        (concat
+                         (when (> ahead 0) (format " ⬇️%d" ahead))
+
+                         (when (> behind 0) (format " ⬆️%d" behind))
+
+                         (when (and (> ahead 0) (> behind 0)) "  🔀")))
+
+                      (let ((modified (length (split-string
+                                               (shell-command-to-string "git ls-files --modified")
+                                               "\n" t)))
+                            (untracked (length (split-string
+                                                (shell-command-to-string
+                                                 "git ls-files --others --exclude-standard")
+                                                "\n" t)))
+                            (conflicts (length (split-string
+                                                (shell-command-to-string
+                                                 "git diff --name-only --diff-filter=U")
+                                                "\n" t))))
+                        (concat
+                         (if (> modified 0) (format " ✏️%d" modified))
+
+                         (if (> untracked 0) (format " ✨%d" untracked))
+
+                         (if (> conflicts 0) (format " ⚔️%d" conflicts))))
+                      " ")
+                     'face `(:background "#212234" :foreground "#F9E2AF"))
+
+                    (propertize "\n" 'face `(:foreground "#212234"))))
+
+                 (propertize emacs-solo/eshell-lambda-symbol 'face font-lock-keyword-face))
+
+              ;; Minimal prompt
+              (propertize emacs-solo/eshell-lambda-symbol 'face font-lock-keyword-face))))
+
+  (setq eshell-prompt-regexp emacs-solo/eshell-lambda-symbol)
+
+
+  ;; SET TERM ENV SO MOST PROGRAMS WON'T COMPLAIN
+  ;;
   (add-hook 'eshell-mode-hook (lambda () (setenv "TERM" "xterm-256color")))
+
+
+  ;; LIST OF VISUAL COMMANDS TO RUN IN A SEPARATED ANSI-TERM
+  ;;
+  (with-eval-after-load 'em-term
+    (add-to-list 'eshell-visual-subcommands '("jj" "resolve"))
+    (add-to-list 'eshell-visual-subcommands '("jj" "squash")))
 
   (setq eshell-visual-commands
         '("vi" "screen" "top"  "htop" "btm" "less" "more" "lynx" "ncftp" "pine" "tin" "trn"
-          "elm" "irssi" "nmtui-connect" "nethack" "vim" "alsamixer" "nvim" "w3m"
-          "ncmpcpp" "newsbeuter" "nethack" "mutt")))
+          "elm" "irssi" "nmtui-connect" "nethack" "vim" "alsamixer" "nvim" "w3m" "psql"
+          "lazygit" "lazydocker" "ncmpcpp" "newsbeuter" "nethack" "mutt" "neomutt" "tmux"
+          "docker" "podman")))
+
 
 ;;; ISEARCH
 (use-package isearch
@@ -920,24 +1081,24 @@ away from the bottom.  Counts wrapped lines as real lines."
 
   (with-eval-after-load 'vc-annotate
     (setopt vc-annotate-color-map
-          '((20 . "#c3e88d")
-            (40 . "#89DDFF")
-            (60 . "#82aaff")
-            (80 . "#676E95")
-            (100 . "#c792ea")
-            (120 . "#f78c6c")
-            (140 . "#79a8ff")
-            (160 . "#f5e0dc")
-            (180 . "#a6e3a1")
-            (200 . "#94e2d5")
-            (220 . "#89dceb")
-            (240 . "#74c7ec")
-            (260 . "#82aaff")
-            (280 . "#b4befe")
-            (300 . "#b5b0ff")
-            (320 . "#8c9eff")
-            (340 . "#6a81ff")
-            (360 . "#5c6bd7"))))
+            '((20 . "#c3e88d")
+              (40 . "#89DDFF")
+              (60 . "#82aaff")
+              (80 . "#676E95")
+              (100 . "#c792ea")
+              (120 . "#f78c6c")
+              (140 . "#79a8ff")
+              (160 . "#f5e0dc")
+              (180 . "#a6e3a1")
+              (200 . "#94e2d5")
+              (220 . "#89dceb")
+              (240 . "#74c7ec")
+              (260 . "#82aaff")
+              (280 . "#b4befe")
+              (300 . "#b5b0ff")
+              (320 . "#8c9eff")
+              (340 . "#6a81ff")
+              (360 . "#5c6bd7"))))
 
   ;; This one is for editing commit messages
   (require 'log-edit)
@@ -1037,43 +1198,43 @@ away from the bottom.  Counts wrapped lines as real lines."
 
 
   (defun emacs-solo/vc-pull-merge-current-branch ()
-  "Pull the latest change from origin for the current branch and display output in a buffer."
-  (interactive)
-  (let* ((branch (vc-git--symbolic-ref "HEAD"))
-         (buffer (get-buffer-create "*Git Pull Output*"))
-         (command (format "git pull origin %s" branch)))
-    (if branch
-        (progn
-          (with-current-buffer buffer
-            (erase-buffer)
-            (insert (format "$ %s\n\n" command))
-            (call-process-shell-command command nil buffer t))
-          (display-buffer buffer))
-      (message "Could not determine current branch."))))
+    "Pull the latest change from origin for the current branch and display output in a buffer."
+    (interactive)
+    (let* ((branch (vc-git--symbolic-ref "HEAD"))
+           (buffer (get-buffer-create "*Git Pull Output*"))
+           (command (format "git pull origin %s" branch)))
+      (if branch
+          (progn
+            (with-current-buffer buffer
+              (erase-buffer)
+              (insert (format "$ %s\n\n" command))
+              (call-process-shell-command command nil buffer t))
+            (display-buffer buffer))
+        (message "Could not determine current branch."))))
 
 
   (defun emacs-solo/vc-browse-remote (&optional current-line)
-  "Open the repository's remote URL in the browser.
+    "Open the repository's remote URL in the browser.
 If CURRENT-LINE is non-nil, point to the current branch, file, and line.
 Otherwise, open the repository's main page."
-  (interactive "P")
-  (let* ((remote-url (string-trim (vc-git--run-command-string nil "config" "--get" "remote.origin.url")))
-         (branch (string-trim (vc-git--run-command-string nil "rev-parse" "--abbrev-ref" "HEAD")))
-         (file (string-trim (file-relative-name (buffer-file-name) (vc-root-dir))))
-         (line (line-number-at-pos)))
-    (message "Opening remote on browser: %s" remote-url)
-    (if (and remote-url (string-match "\\(?:git@\\|https://\\)\\([^:/]+\\)[:/]\\(.+?\\)\\(?:\\.git\\)?$" remote-url))
-        (let ((host (match-string 1 remote-url))
-              (path (match-string 2 remote-url)))
-          ;; Convert SSH URLs to HTTPS (e.g., git@github.com:user/repo.git -> https://github.com/user/repo)
-          (when (string-prefix-p "git@" host)
-            (setq host (replace-regexp-in-string "^git@" "" host)))
-          ;; Construct the appropriate URL based on CURRENT-LINE
-          (browse-url
-           (if current-line
-               (format "https://%s/%s/blob/%s/%s#L%d" host path branch file line)
-             (format "https://%s/%s" host path))))
-      (message "Could not determine repository URL"))))
+    (interactive "P")
+    (let* ((remote-url (string-trim (vc-git--run-command-string nil "config" "--get" "remote.origin.url")))
+           (branch (string-trim (vc-git--run-command-string nil "rev-parse" "--abbrev-ref" "HEAD")))
+           (file (string-trim (file-relative-name (buffer-file-name) (vc-root-dir))))
+           (line (line-number-at-pos)))
+      (message "Opening remote on browser: %s" remote-url)
+      (if (and remote-url (string-match "\\(?:git@\\|https://\\)\\([^:/]+\\)[:/]\\(.+?\\)\\(?:\\.git\\)?$" remote-url))
+          (let ((host (match-string 1 remote-url))
+                (path (match-string 2 remote-url)))
+            ;; Convert SSH URLs to HTTPS (e.g., git@github.com:user/repo.git -> https://github.com/user/repo)
+            (when (string-prefix-p "git@" host)
+              (setq host (replace-regexp-in-string "^git@" "" host)))
+            ;; Construct the appropriate URL based on CURRENT-LINE
+            (browse-url
+             (if current-line
+                 (format "https://%s/%s/blob/%s/%s#L%d" host path branch file line)
+               (format "https://%s/%s" host path))))
+        (message "Could not determine repository URL"))))
   (global-set-key (kbd "C-x v B") 'emacs-solo/vc-browse-remote)
   (global-set-key (kbd "C-x v o")
                   '(lambda () (interactive) (emacs-solo/vc-browse-remote 1)))
@@ -1156,6 +1317,9 @@ Otherwise, open the repository's main page."
   :init
   (fset #'jsonrpc--log-event #'ignore)
 
+  (setq-default eglot-workspace-configuration (quote
+                                               (:gopls (:hints (:parameterNames t)))))
+
   (defun emacs-solo/eglot-setup ()
     "Setup eglot mode with specific exclusions."
     (unless (eq major-mode 'emacs-lisp-mode)
@@ -1169,7 +1333,7 @@ Otherwise, open the repository's main page."
   :bind (:map
          eglot-mode-map
          ("C-c l a" . eglot-code-actions)
-         ("C-c l o" . eglot-code-actions-organize-imports)
+         ("C-c l o" . eglot-code-action-organize-imports)
          ("C-c l r" . eglot-rename)
          ("C-c l f" . eglot-format)))
 
@@ -1177,7 +1341,7 @@ Otherwise, open the repository's main page."
 (use-package flymake
   :ensure nil
   :defer t
-  :hook (prog-mode . flymake-mode)
+  :hook (prog-mode-hook . flymake-mode)
   :bind (:map flymake-mode-map
               ("M-8" . flymake-goto-next-error)
               ("M-7" . flymake-goto-prev-error)
@@ -1212,7 +1376,7 @@ and restart Flymake to apply the changes."
 (use-package whitespace
   :ensure nil
   :defer t
-  :hook (before-save . whitespace-cleanup)
+  :hook (before-save-hook . whitespace-cleanup)
   ;; if we wanna remove this hook at any time, eval:
   ;; (remove-hook 'before-save-hook #'whitespace-cleanup)
   )
@@ -1288,7 +1452,7 @@ and restart Flymake to apply the changes."
 
   ;; Keep minibuffer lines unwrapped, long lines like on M-y will be truncated
   (add-hook 'minibuffer-setup-hook
-          (lambda () (setq truncate-lines t)))
+            (lambda () (setq truncate-lines t)))
 
   (minibuffer-depth-indicate-mode 1)
   (minibuffer-electric-default-mode 1))
@@ -1301,32 +1465,43 @@ and restart Flymake to apply the changes."
   :custom
   (newsticker-treeview-treewindow-width 40)
   :hook
-  (newsticker-treeview-item-mode . (lambda ()
+  (newsticker-treeview-mode-hook . (lambda ()
+                                     (define-key newsticker-treeview-mode-map
+                                                 (kbd "V")
+                                                 'emacs-solo/newsticker-play-yt-video-from-buffer)
+                                     (define-key newsticker-treeview-list-mode-map
+                                                 (kbd "V")
+                                                 'emacs-solo/newsticker-play-yt-video-from-buffer)
                                      (define-key newsticker-treeview-item-mode-map
                                                  (kbd "V")
                                                  'emacs-solo/newsticker-play-yt-video-from-buffer)))
   :init
   (defun emacs-solo/newsticker-play-yt-video-from-buffer ()
-    "Plays with mpv async, the current buffer found '* videoId: '."
+    "Focus the window showing '*Newsticker Item*' and play the video."
     (interactive)
-    (save-excursion
-      (goto-char (point-min))
-      (when (re-search-forward "^\\* videoId: \\(\\w+\\)" nil t)
-        (let ((video-id (match-string 1)))
-          (start-process "mpv-video" nil "mpv" (format "https://www.youtube.com/watch?v=%s" video-id))
-          (message "Playing with mpv: %s" video-id))))))
+    (let ((window (get-buffer-window "*Newsticker Item*" t)))
+      (if window
+          (progn
+            (select-window window)
+            (save-excursion
+              (goto-char (point-min))
+              (when (re-search-forward "^\\* videoId: \\(\\w+\\)" nil t)
+                (let ((video-id (match-string 1)))
+                  (start-process "mpv-video" nil "mpv" (format "https://www.youtube.com/watch?v=%s" video-id))
+                  (message "Playing with mpv: %s" video-id))))))
+      (message "No window showing *Newsticker Item* buffer."))))
 
 
 ;;; ELEC_PAIR
 (use-package elec-pair
   :ensure nil
   :defer
-  :hook (after-init . electric-pair-mode))
+  :hook (after-init-hook . electric-pair-mode))
 
 ;;; PAREN
 (use-package paren
   :ensure nil
-  :hook (after-init . show-paren-mode)
+  :hook (after-init-hook . show-paren-mode)
   :custom
   (show-paren-delay 0)
   (show-paren-style 'mixed)
@@ -1387,7 +1562,7 @@ and restart Flymake to apply the changes."
 ;;; TIME
 (use-package time
   :ensure nil
-  ;; :hook (after-init . display-time-mode) ;; If we'd like to see it on the modeline
+  ;; :hook (after-init-hook . display-time-mode) ;; If we'd like to see it on the mode-line
   :custom
   (world-clock-time-format "%A %d %B %r %Z")
   (display-time-day-and-date t)
@@ -1430,20 +1605,98 @@ and restart Flymake to apply the changes."
   (setq uniquify-strip-common-suffix t)
   (setq uniquify-after-kill-buffer-p t))
 
+
 ;;; WHICH-KEY
 (use-package which-key
   :defer t
   :ensure nil
   :hook
-  (after-init . which-key-mode)
+  (after-init-hook . which-key-mode)
   :config
-  (setq which-key-separator "  ")
-  (setq which-key-prefix-prefix "... ")
+  (setq which-key-separator " ")
+  (setq which-key-prefix-prefix "… ")
   (setq which-key-max-display-columns 3)
-  (setq which-key-idle-delay 1.5)
+  (setq which-key-idle-delay 1)
   (setq which-key-idle-secondary-delay 0.25)
   (setq which-key-add-column-padding 1)
-  (setq which-key-max-description-length 40))
+  (setq which-key-max-description-length 40)
+
+  ;; Inspired by: https://gist.github.com/mmarshall540/a12f95ab25b1941244c759b1da24296d
+  ;;
+  ;; By default, Which-key doesn't give much help for prefix-keys. It
+  ;; either shows the generic description, "+prefix", or the name of a
+  ;; prefix-command, which usually isn't as descriptive as we'd like.
+  ;;
+  ;; Here are some descriptions for the default bindings in `global-map'
+  ;; and `org-mode-map'.
+  (which-key-add-key-based-replacements
+    "<f1> 4" "help-other-win"
+    "<f1>" "help"
+    "<f2>" "2column"
+    "C-c" "mode-and-user"
+    "C-c !" "flymake"
+    "C-c g" "git-gutter"
+    "C-h 4" "help-other-win"
+    "C-h" "help"
+    "C-x 4" "other-window"
+    "C-x 5" "other-frame"
+    "C-x 6" "2-column"
+    "C-x 8" "insert-special"
+    "C-x 8 ^" "superscript (⁰, ¹, ², …)"
+    "C-x 8 _" "subscript (₀, ₁, ₂, …)"
+    "C-x 8 a" "arrows & æ (←, →, ↔, æ)"
+    "C-x 8 e" "emojis (🫎, 🇧🇷, 🇮🇹, …)"
+    "C-x 8 *" "common symbols ( , ¡, €, …)"
+    "C-x 8 =" "macron (Ā, Ē, Ḡ, …)"
+    "C-x 8 N" "macron (№)"
+    "C-x 8 O" "macron (œ)"
+    "C-x 8 ~" "tilde (~, ã, …)"
+    "C-x 8 /" "stroke (÷, ≠, ø, …)"
+    "C-x 8 ." "dot (·, ż)"
+    "C-x 8 ," "cedilla (¸, ç, ą, …)"
+    "C-x 8 '" "acute (á, é, í, …)"
+    "C-x 8 `" "grave (à, è, ì, …)"
+    "C-x 8 \"" "quotation/dieresis (\", ë, ß, …)"
+    "C-x 8 1" "†, 1/…"
+    "C-x 8 2" "‡"
+    "C-x 8 3" "3/…"
+    "C-x C-k C-q" "kmacro-counters"
+    "C-x C-k C-r a" "kmacro-add"
+    "C-x C-k C-r" "kmacro-register"
+    "C-x C-k" "keyboard-macros"
+    "C-x RET" "encoding/input"
+    "C-x a i" "abbrevs-inverse-add"
+    "C-x a" "abbrevs"
+    "C-x n" "narrowing"
+    "C-x p" "projects"
+    "C-x r" "reg/rect/bkmks"
+    "C-x t ^" "tab-bar-detach"
+    "C-x t" "tab-bar"
+    "C-x v M" "vc-mergebase"
+    "C-x v b" "vc-branch"
+    "C-x v" "version-control"
+    "C-x w ^" "window-detach"
+    "C-x w" "window-extras"
+    "C-x x" "buffer-extras"
+    "C-x" "extra-commands"
+    "M-g" "goto-map"
+    "M-s h" "search-highlight"
+    "M-s" "search-map")
+
+  ;; Upon loading, the built-in `page-ext' package turns "C-x C-p" into
+  ;; a prefix-key. If you know of other built-in packages that have
+  ;; this behavior, please let me know, so I can add them.
+  (with-eval-after-load 'page-ext
+    (which-key-add-key-based-replacements
+      "C-x C-p" "page-extras"))
+
+  ;; Org-mode provides some additional prefix-keys in `org-mode-map'.
+  (with-eval-after-load 'org
+    (which-key-add-keymap-based-replacements org-mode-map
+      "C-c \"" "org-plot"
+      "C-c C-v" "org-babel"
+      "C-c C-x" "org-extra-commands")))
+
 
 ;;; WEBJUMP
 (use-package webjump
@@ -1457,7 +1710,8 @@ and restart Flymake to apply the changes."
      ("YouTube" . [simple-query "www.youtube.com/feed/subscriptions" "www.youtube.com/rnesults?search_query=" ""])
      ("ChatGPT" . [simple-query "https://chatgpt.com" "https://chatgpt.com/?q=" ""]))))
 
- ;;; THEMES
+
+;;; THEMES
 (use-package modus-themes
   :ensure nil
   :defer t
@@ -1518,26 +1772,26 @@ and restart Flymake to apply the changes."
      (variable "#c792ea")
      (docstring "#8d92af")
      (constant "#f78c6c")))
-    :config
-    (modus-themes-with-colors
-      (custom-set-faces
-       `(tab-bar
-         ((,c
-           :background "#232635"
-           :foreground "#A6Accd"
-           ;; :box (:line-width 1 :color "#676E95")
-           )))
-       `(tab-bar-tab
-         ((,c
-           ;; :background "#232635"
-           ;; :underline t
-           ;; :box (:line-width 1 :color "#676E95")
+  :config
+  (modus-themes-with-colors
+    (custom-set-faces
+     `(tab-bar
+       ((,c
+         :background "#232635"
+         :foreground "#A6Accd"
+         ;; :box (:line-width 1 :color "#676E95")
          )))
-       `(tab-bar-tab-inactive
-         ((,c
-           ;; :background "#232635"
-           ;; :box (:line-width 1 :color "#676E95")
-           )))))
+     `(tab-bar-tab
+       ((,c
+         ;; :background "#232635"
+         ;; :underline t
+         ;; :box (:line-width 1 :color "#676E95")
+         )))
+     `(tab-bar-tab-inactive
+       ((,c
+         ;; :background "#232635"
+         ;; :box (:line-width 1 :color "#676E95")
+         )))))
   :init
   (load-theme 'modus-vivendi-tinted t))
 
@@ -1546,7 +1800,11 @@ and restart Flymake to apply the changes."
 ;;; SASS-MODE
 (use-package scss-mode
   :mode "\\.sass\\'"
+  :hook
+  ((scss-mode-hook . (lambda ()
+                       (setq indent-tabs-mode nil))))
   :defer t)
+
 
 ;;; -------------------- TREESITTER AREA
 ;;; RUBY-TS-MODE
@@ -1560,31 +1818,43 @@ and restart Flymake to apply the changes."
   (ruby-indent-level 2)
   (ruby-indent-tabs-mode nil))
 
+
 ;;; JS-TS-MODE
 (use-package js-ts-mode
   :ensure js ;; I care about js-base-mode but it is locked behind the feature "js"
   :mode "\\.jsx?\\'"
-  :defer 't
+  :defer t
+  :hook
+  ((js-ts-mode-hook . (lambda ()
+                        (setq indent-tabs-mode nil))))
   :custom
   (js-indent-level 2)
   :config
   (add-to-list 'treesit-language-source-alist '(javascript "https://github.com/tree-sitter/tree-sitter-javascript" "master" "src"))
   (add-to-list 'treesit-language-source-alist '(jsdoc "https://github.com/tree-sitter/tree-sitter-jsdoc" "master" "src")))
 
+
 ;;; TYPESCRIPT-TS-MODE
 (use-package typescript-ts-mode
   :mode "\\.ts\\'"
-  :defer 't
+  :defer t
+  :hook
+  ((typescript-ts-mode-hook . (lambda ()
+                                (setq indent-tabs-mode nil))))
   :custom
   (typescript-indent-level 2)
   :config
   (add-to-list 'treesit-language-source-alist '(typescript "https://github.com/tree-sitter/tree-sitter-typescript" "master" "typescript/src"))
   (unbind-key "M-." typescript-ts-base-mode-map))
 
+
 ;;; TYPESCRIPT-TS-MODE
 (use-package tsx-ts-mode
   :mode "\\.tsx\\'"
-  :defer 't
+  :defer t
+  :hook
+  ((tsx-ts-mode-hook . (lambda ()
+                         (setq indent-tabs-mode nil))))
   :custom
   (typescript-indent-level 2)
   :config
@@ -1596,19 +1866,21 @@ and restart Flymake to apply the changes."
 (use-package rust-ts-mode
   :ensure rust-ts-mode
   :mode "\\.rs\\'"
-  :defer 't
+  :defer t
   :custom
   (rust-indent-level 2)
   :config
   (add-to-list 'treesit-language-source-alist '(rust "https://github.com/tree-sitter/tree-sitter-rust" "master" "src")))
 
+
 ;;; TOML-TS-MODE
 (use-package toml-ts-mode
   :ensure toml-ts-mode
   :mode "\\.toml\\'"
-  :defer 't
+  :defer t
   :config
   (add-to-list 'treesit-language-source-alist '(toml "https://github.com/ikatyang/tree-sitter-toml" "master" "src")))
+
 
 ;;; MARKDOWN-TS-MODE - EMACS-31
 ;;  As I first proposed here:
@@ -1616,28 +1888,41 @@ and restart Flymake to apply the changes."
 (use-package markdown-ts-mode
   :ensure nil
   :mode "\\.md\\'"
-  :defer 't
+  :defer t
   :config
-  (add-to-list 'major-mode-remap-alist '(markdown-mode . markdown-ts-mode))
+  ;; (add-to-list 'major-mode-remap-alist '(markdown-mode . markdown-ts-mode))
   (add-to-list 'treesit-language-source-alist '(markdown "https://github.com/tree-sitter-grammars/tree-sitter-markdown" "split_parser" "tree-sitter-markdown/src"))
   (add-to-list 'treesit-language-source-alist '(markdown-inline "https://github.com/tree-sitter-grammars/tree-sitter-markdown" "split_parser" "tree-sitter-markdown-inline/src")))
+
 
 ;;; YAML-TS-MODE
 (use-package yaml-ts-mode
   :ensure yaml-ts-mode
   :mode "\\.ya?ml\\'"
-  :defer 't
+  :defer t
   :config
   (add-to-list 'treesit-language-source-alist '(yaml "https://github.com/tree-sitter-grammars/tree-sitter-yaml" "master" "src")))
+
 
 ;;; DOCKERFILE-TS-MODE
 (use-package dockerfile-ts-mode
   :ensure dockerfile-ts-mode
   :mode "\\Dockerfile.*\\'"
-  :defer 't
+  :defer t
   :config
   (add-to-list 'treesit-language-source-alist '(dockerfile "https://github.com/camdencheek/tree-sitter-dockerfile" "main" "src")))
 
+
+;;; GO-TS-MODE
+(use-package go-ts-mode
+  :ensure t
+  :mode "\\.go\\'"
+  :hook
+  ((go-ts-mode-hook . (lambda ()
+                        (setq indent-tabs-mode t)  ; Use tabs, go likes tabs, go figure
+                        (setq tab-width 4)         ; Tabs *display* as 4 spaces
+                        (setq-local go-ts-mode-indent-offset tab-width))))
+  :defer t)
 
 ;;; ------------------- EMACS-SOLO CUSTOMS
 ;;; EMACS-SOLO-HOOKS
@@ -1648,12 +1933,13 @@ and restart Flymake to apply the changes."
   :defer t
   :init
 
-  (defun emacs-solo/prefer-tabs ()
-    "Disables indent-tabs-mode, and prefer spaces over tabs."
+  (defun emacs-solo/prefer-spaces ()
+    "Disable indent-tabs-mode to prefer spaces over tabs."
     (interactive)
-    (indent-tabs-mode -1))
+    (setq indent-tabs-mode nil))
 
-  (add-hook 'prog-mode-hook #'emacs-solo/prefer-tabs))
+  ;; Only override where necessary
+  (add-hook 'emacs-lisp-mode-hook #'emacs-solo/prefer-spaces))
 
 
 ;;; EMACS-SOLO-MOVEMENTS
@@ -1742,6 +2028,7 @@ Also first tries the local node_modules/.bin and later the global bin."
         (message "No formatter found (biome or prettier)"))))
 
   (global-set-key (kbd "C-c p") #'emacs-solo-movements/format-current-file)
+  (global-set-key (kbd "C-c C-p") #'emacs-solo-movements/format-current-file)
 
 
   (defun emacs-solo/transpose-split ()
@@ -1793,9 +2080,9 @@ Also first tries the local node_modules/.bin and later the global bin."
     "Set frame transparency (Graphical Mode)."
     (interactive)
     (unless (display-graphic-p)
-        (add-hook 'after-make-frame-functions 'emacs-solo/clear-terminal-background-color)
-        (add-hook 'window-setup-hook 'emacs-solo/clear-terminal-background-color)
-        (add-hook 'ef-themes-post-load-hook 'emacs-solo/clear-terminal-background-color))
+      (add-hook 'after-make-frame-functions 'emacs-solo/clear-terminal-background-color)
+      (add-hook 'window-setup-hook 'emacs-solo/clear-terminal-background-color)
+      (add-hook 'ef-themes-post-load-hook 'emacs-solo/clear-terminal-background-color))
 
     (when (eq system-type 'darwin)
       (set-frame-parameter (selected-frame) 'alpha '(90 90)))
@@ -1827,18 +2114,21 @@ Also first tries the local node_modules/.bin and later the global bin."
   ;; Shorten big branches names
   (defun emacs-solo/shorten-vc-mode (vc)
     "Shorten VC string to at most 20 characters.
- Replacing `Git-' with a branch symbol."
-    (let* ((vc (replace-regexp-in-string "^ Git[:-]" "  " vc))) ;; Options:   ᚠ ⎇
+Replacing `Git-' with a branch symbol."
+    (let* ((vc (replace-regexp-in-string "^ Git[:-]"
+                                         (if (char-displayable-p ?) "  " "Git: ")
+                                         vc))) ;; Options:   ᚠ ⎇
       (if (> (length vc) 20)
-          (concat (substring vc 0 20) "…")
+          (concat (substring vc 0 20)
+                  (if (char-displayable-p ?…) "…" "..."))
         vc)))
 
-  ;; Formats Modeline
+  ;; Formats mode-line
   (setq-default mode-line-format
                 '("%e" "  "
                   ;; (:propertize " " display (raise +0.1)) ;; Top padding
                   ;; (:propertize " " display (raise -0.1)) ;; Bottom padding
-                  (:propertize "λ  " face font-lock-keyword-face)
+                  (:propertize "𝛌  " face font-lock-keyword-face)
 
                   (:propertize
                    ("" mode-line-mule-info mode-line-client mode-line-modified mode-line-remote))
@@ -1860,14 +2150,16 @@ Also first tries the local node_modules/.bin and later the global bin."
                 mode-line-buffer-identification '(" %b")
                 mode-line-position-column-line-format '(" %l:%c"))
 
-  ;; Provides the Diminish functionality
-  (defvar emacs-solo-hidden-minor-modes
-    '(abbrev-mode
-      eldoc-mode
-      flyspell-mode
-      smooth-scroll-mode
-      outline-minor-mode
-      which-key-mode))
+  ;; EMACS-31
+  (setq mode-line-collapse-minor-modes
+        '(abbrev-mode
+          eldoc-mode
+          flyspell-mode
+          smooth-scroll-mode
+          outline-minor-mode
+          which-key-mode))
+
+  (defvar emacs-solo-hidden-minor-modes mode-line-collapse-minor-modes)
 
   (defun emacs-solo/purge-minor-modes ()
     (interactive)
@@ -1876,7 +2168,8 @@ Also first tries the local node_modules/.bin and later the global bin."
         (when trg
           (setcar trg "")))))
 
-  (add-hook 'after-change-major-mode-hook 'emacs-solo/purge-minor-modes))
+  (if (< emacs-major-version 31)
+      (add-hook 'after-change-major-mode-hook 'emacs-solo/purge-minor-modes)))
 
 
 ;;; EMACS-SOLO-EXEC-PATH-FROM-SHELL
@@ -1901,27 +2194,27 @@ Also first tries the local node_modules/.bin and later the global bin."
       (message ">>> emacs-solo: PATH loaded")))
 
   (defun emacs-solo/fix-asdf-path ()
-  "Ensure asdf shims and active Node.js version's bin directory are first in PATH."
-  (interactive)
-  (let* ((asdf-shims (expand-file-name "~/.asdf/shims"))
-         (node-bin (string-trim (shell-command-to-string "asdf where nodejs 2>/dev/null")))
-         (new-paths (list asdf-shims)))
+    "Ensure asdf shims and active Node.js version's bin directory are first in PATH."
+    (interactive)
+    (let* ((asdf-shims (expand-file-name "~/.asdf/shims"))
+           (node-bin (string-trim (shell-command-to-string "asdf where nodejs 2>/dev/null")))
+           (new-paths (list asdf-shims)))
 
-    ;; If Node.js is installed, add its bin path
-    (when (file-directory-p node-bin)
-      (push (concat node-bin "/bin") new-paths))
+      ;; If Node.js is installed, add its bin path
+      (when (file-directory-p node-bin)
+        (push (concat node-bin "/bin") new-paths))
 
-    ;; Remove old asdf-related paths from PATH and exec-path
-    (setq exec-path (seq-remove (lambda (p) (string-match-p "/\\.asdf/" p)) exec-path))
-    (setenv "PATH" (string-join (seq-remove (lambda (p) (string-match-p "/\\.asdf/" p))
-                                            (split-string (getenv "PATH") ":"))
-                                ":"))
+      ;; Remove old asdf-related paths from PATH and exec-path
+      (setq exec-path (seq-remove (lambda (p) (string-match-p "/\\.asdf/" p)) exec-path))
+      (setenv "PATH" (string-join (seq-remove (lambda (p) (string-match-p "/\\.asdf/" p))
+                                              (split-string (getenv "PATH") ":"))
+                                  ":"))
 
-    ;; Add the new paths to exec-path and PATH
-    (dolist (p (reverse new-paths))
-      (unless (member p exec-path) (push p exec-path))
-      (unless (member p (split-string (getenv "PATH") ":"))
-        (setenv "PATH" (concat p ":" (getenv "PATH")))))))
+      ;; Add the new paths to exec-path and PATH
+      (dolist (p (reverse new-paths))
+        (unless (member p exec-path) (push p exec-path))
+        (unless (member p (split-string (getenv "PATH") ":"))
+          (setenv "PATH" (concat p ":" (getenv "PATH")))))))
 
   (add-hook 'find-file-hook #'emacs-solo/fix-asdf-path)
   (add-hook 'eshell-mode-hook #'emacs-solo/fix-asdf-path)
@@ -2014,7 +2307,7 @@ Opening and closing delimiters will have matching colors."
   (add-hook 'minibuffer-setup-hook #'emacs-solo/minibuffer-move-cursor)
 
   :bind (:map project-prefix-map
-         ("P" . emacs-solo/find-projects-and-switch)))
+              ("P" . emacs-solo/find-projects-and-switch)))
 
 
 ;;; EMACS-SOLO-VIPER-EXTENSIONS
@@ -2316,7 +2609,7 @@ A compound word includes letters, numbers, `-`, and `_`."
       (emacs-solo/highlight-keywords-mode-off)))
 
   :hook
-  (prog-mode . (lambda () (run-at-time "1 sec" nil #'emacs-solo/highlight-keywords-mode-on))))
+  (prog-mode-hook . (lambda () (run-at-time "1 sec" nil #'emacs-solo/highlight-keywords-mode-on))))
 
 
 ;;; EMACS-SOLO-GUTTER
@@ -2512,9 +2805,9 @@ Windows are labeled starting from the top-left window and proceeding top to bott
         (overlay-put overlay 'after-string
                      (propertize (format " [%s] " key)
                                  'face '(:foreground "#c3e88d"
-                                         :background "#232635"
-                                         :weight bold
-                                         :height default)))
+                                                     :background "#232635"
+                                                     :weight bold
+                                                     :height default)))
         (overlay-put overlay 'window window)
         (push overlay emacs-solo-ace-window/quick-window-overlays))))
 
@@ -2533,7 +2826,7 @@ Windows are labeled starting from the top-left window and proceeding top to bott
   :no-require t
   :defer t
   :init
-  (defvar emacs-solo-center-document-desired-width 90
+  (defvar emacs-solo-center-document-desired-width 120
     "The desired width of a document centered in the window.")
 
   (defun emacs-solo/center-document--adjust-margins ()
@@ -2878,6 +3171,73 @@ If a region is selected, prompt for additional input and pass it as a query."
               (forward-line 1)))))))
 
   (add-hook 'dired-after-readin-hook #'emacs-solo/dired-git-status-overlay))
+
+
+;;; EMACS-SOLO-DIRED-ICONS
+;;
+(use-package emacs-solo-dired-icons
+  :ensure nil
+  :no-require t
+  :defer t
+  :init
+  (defvar emacs-solo/dired-icons-file-icons
+    '(("el" . "📜")      ("rb" . "💎")      ("js" . "⚙️")      ("ts" . "⚙️")
+      ("json" . "🗂️")    ("md" . "📝")      ("txt" . "📝")     ("html" . "🌐")
+      ("css" . "🎨")     ("scss" . "🎨")    ("png" . "🖼️")    ("jpg" . "🖼️")
+      ("jpeg" . "🖼️")   ("gif" . "🖼️")    ("svg" . "🖼️")    ("pdf" . "📄")
+      ("zip" . "📦")     ("tar" . "📦")     ("gz" . "📦")      ("bz2" . "📦")
+      ("7z" . "📦")      ("org" . "📝")    ("sh" . "💻")      ("c" . "🔧")
+      ("h" . "📘")       ("cpp" . "➕")     ("hpp" . "📘")     ("py" . "🐍")
+      ("java" . "☕")    ("go" . "🌍")      ("rs" . "💨")      ("php" . "🐘")
+      ("pl" . "🐍")      ("lua" . "🎮")     ("ps1" . "🔧")     ("exe" . "⚡")
+      ("dll" . "🔌")     ("bat" . "⚡")      ("yaml" . "⚙️")    ("toml" . "⚙️")
+      ("ini" . "⚙️")     ("csv" . "📊")     ("xls" . "📊")     ("xlsx" . "📊")
+      ("sql" . "🗄️")    ("log" . "📝")     ("apk" . "📱")     ("dmg" . "💻")
+      ("iso" . "💿")     ("torrent" . "⏳") ("bak" . "🗃️")    ("tmp" . "⚠️")
+      ("desktop" . "🖥️") ("md5" . "🔐")     ("sha256" . "🔐")  ("pem" . "🔐")
+      ("sqlite" . "🗄️")  ("db" . "🗄️")
+      ("mp3" . "🎶")     ("wav" . "🎶")     ("flac" . "🎶")
+      ("ogg" . "🎶")     ("m4a" . "🎶")     ("mp4" . "🎬")     ("avi" . "🎬")
+      ("mov" . "🎬")     ("mkv" . "🎬")     ("webm" . "🎬")    ("flv" . "🎬")
+      ("ico" . "🖼️")     ("ttf" . "🔠")     ("otf" . "🔠")     ("eot" . "🔠")
+      ("woff" . "🔠")    ("woff2" . "🔠")   ("epub" . "📚")    ("mobi" . "📚")
+      ("azw3" . "📚")    ("fb2" . "📚")     ("chm" . "📚")     ("tex" . "📚")
+      ("bib" . "📚")     ("apk" . "📱")     ("rar" . "📦")     ("xz" . "📦")
+      ("zst" . "📦")     ("tar.xz" . "📦")  ("tar.zst" . "📦") ("tar.gz" . "📦")
+      ("tgz" . "📦")     ("bz2" . "📦")     ("mpg" . "🎬")     ("webp" . "🖼️")
+      ("flv" . "🎬")     ("3gp" . "🎬")     ("ogv" . "🎬")     ("srt" . "🔠")
+      ("vtt" . "🔠")     ("cue" . "📀"))
+    "Icons for specific file extensions in Dired.")
+
+  (defun emacs-solo/dired-icons-icon-for-file (file)
+    (if (file-directory-p file)
+        "📁"
+      (let* ((ext (file-name-extension file))
+             (icon (and ext (assoc-default (downcase ext) emacs-solo/dired-icons-file-icons))))
+        (or icon "📄"))))
+
+  (defun emacs-solo/dired-icons-icons-regexp ()
+    "Return a regexp that matches any icon we use."
+    (let ((icons (mapcar #'cdr emacs-solo/dired-icons-file-icons)))
+      (concat "^\\(" (regexp-opt (cons "📁" icons)) "\\) ")))
+
+  (defun emacs-solo/dired-icons-add-icons ()
+    "Add icons to filenames in Dired buffer."
+    (when (derived-mode-p 'dired-mode)
+      (let ((inhibit-read-only t)
+            (icon-regex (emacs-solo/dired-icons-icons-regexp)))
+        (save-excursion
+          (goto-char (point-min))
+          (while (not (eobp))
+            (condition-case nil
+                (when-let ((file (dired-get-filename nil t)))
+                  (dired-move-to-filename)
+                  (unless (looking-at-p icon-regex)
+                    (insert (concat (emacs-solo/dired-icons-icon-for-file file) " "))))
+              (error nil))  ;; gracefully skip invalid lines
+            (forward-line 1))))))
+
+  (add-hook 'dired-after-readin-hook #'emacs-solo/dired-icons-add-icons))
 
 
 ;;; EMACS-SOLO-CONTAINER
