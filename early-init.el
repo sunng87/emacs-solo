@@ -19,6 +19,7 @@
       gc-cons-percentage 0.6
       vc-handled-backends '(Git))
 
+(setopt native-comp-async-on-battery-power nil) ; EMACS-31
 
 ;; HACK: avoid being flashbanged
 (defun emacs-solo/avoid-initial-flash-of-light ()
@@ -35,10 +36,20 @@
 (add-hook 'after-init-hook #'emacs-solo/reset-default-foreground)   ; HACK undo
 
 
+;; Always start Emacs and new frames maximized
+(add-to-list 'default-frame-alist '(fullscreen . maximized))
+
+
 ;; Better Window Management handling
 (setq frame-resize-pixelwise t
       frame-inhibit-implied-resize t
-      frame-title-format '("Emacs"))
+      frame-title-format
+      '(:eval
+        (let ((project (project-current)))
+          (if project
+              (concat "Emacs - [p] "
+                      (file-name-nondirectory (directory-file-name (project-root project))))
+              (concat "Emacs - " (buffer-name))))))
 
 (setq inhibit-compacting-font-caches t)
 
@@ -48,13 +59,6 @@
 (if (fboundp 'scroll-bar-mode) (scroll-bar-mode -1))
 (if (fboundp 'tool-bar-mode) (tool-bar-mode -1))
 (if (fboundp 'tooltip-mode) (tooltip-mode -1))
-
-
-;; Resizing the Emacs frame can be a terribly expensive part of changing the
-;; font. By inhibiting this, we easily halve startup times with fonts that are
-;; larger than the system default.
-(setq frame-inhibit-implied-resize t
-      frame-resize-pixelwise t)
 
 
 ;; Avoid raising the *Messages* buffer if anything is still without
