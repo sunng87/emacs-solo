@@ -46,6 +46,10 @@
   :type 'boolean
   :group 'emacs-solo)
 
+(defcustom emacs-solo-enable-eldoc-box t
+  "Enable `emacs-solo-eldoc-box'."
+  :type 'boolean
+  :group 'emacs-solo)
 
 ;;; -------------------- GENERAL EMACS CONFIG
 ;;; EMACS
@@ -164,6 +168,11 @@
   (setq display-line-numbers-type 'relative)
   (add-hook 'prog-mode-hook #'display-line-numbers-mode)
   (add-hook 'text-mode-hook #'display-line-numbers-mode)
+
+  ;; Starts `completion-preview-mode' automatically in some modes
+  (add-hook 'prog-mode-hook #'completion-preview-mode)
+  (add-hook 'text-mode-hook #'completion-preview-mode)
+  (add-hook 'rcirc-mode-hook #'completion-preview-mode)
 
   ;; A Protesilaos life savier HACK
   ;; Add option "d" to whenever using C-x s or C-x C-c, allowing a quick preview
@@ -915,8 +924,18 @@ away from the bottom.  Counts wrapped lines as real lines."
     "Locally reset scrolling behavior in term-like buffers."
     (setq-local scroll-conservatively 0)
     (setq-local scroll-margin 0))
-  (add-hook 'term-mode-hook #'emacs-solo/reset-scrolling-vars-for-term)
   (add-hook 'eshell-mode-hook #'emacs-solo/reset-scrolling-vars-for-term)
+
+
+  ;; FIXME should e have a use-package term section?
+  (defun emacs-solo/disable-global-scrolling-in-ansi-term ()
+    "Disable global scrolling behavior in ansi-term buffers."
+    (when (and (eq major-mode 'term-mode)
+               (string-prefix-p "*ansi-term" (buffer-name)))
+      (setq-local scroll-conservatively 0)
+      (setq-local scroll-margin 0)
+      (setq-local scroll-step 0)))
+  (add-hook 'term-mode-hook #'emacs-solo/disable-global-scrolling-in-ansi-term)
 
 
   ;; MAKES C-c l GIVE AN ICOMPLETE LIKE SEARCH TO HISTORY COMMANDS
@@ -1147,6 +1166,7 @@ away from the bottom.  Counts wrapped lines as real lines."
    vc-git-revision-complete-only-branches nil
    vc-annotate-display-mode 'scale
    add-log-keep-changes-together t
+   vc-dir-hide-up-to-date-on-revert t ;; EMACS-31
    vc-make-backup-files nil)                                  ;; Do not backup version controlled files
 
   (with-eval-after-load 'vc-annotate
@@ -1213,6 +1233,7 @@ away from the bottom.  Counts wrapped lines as real lines."
     (define-key vc-prefix-map (kbd "U") #'emacs-solo/vc-git-reset)
 
     ;; Bind g to hide up to date files after refreshing in vc-dir
+    ;; NOTE: this won't be needed once EMACS-31 gets released: vc-dir-hide-up-to-date-on-revert does that
     (define-key vc-dir-mode-map (kbd "g")
                 (lambda () (interactive) (vc-dir-refresh) (vc-dir-hide-up-to-date)))
 
@@ -1507,7 +1528,7 @@ and restart Flymake to apply the changes."
 (use-package minibuffer
   :ensure nil
   :custom
-  (completion-styles '(partial-completion flex initials))
+  (completion-styles '(partial-completion flex initials)) ;;  NOTE: for minibuffer we use another one, see below
   (completion-ignore-case t)
   (completion-show-help t)
   ;; (completion-auto-select t) ;; NOTE: only turn this on if not using icomplete, can also be 'second-tab
@@ -1517,6 +1538,61 @@ and restart Flymake to apply the changes."
   (read-file-name-completion-ignore-case t)
   (read-buffer-completion-ignore-case t)
   :config
+  (defun emacs-solo/setup-simple-orderless ()
+    (defun simple-orderless-completion (string table pred point)
+      "Enhanced orderless completion with better partial matching.
+As seen on: https://emacs.dyerdwelling.family/emacs/20250604085817-emacs--building-your-own-orderless-style-completion-in-emacs-lisp/"
+      (let* ((words (split-string string "[-, ]+"))
+             (patterns (mapcar (lambda (word)
+                                 (concat "\\b.*" (regexp-quote word) ".*"))
+                               words))
+             (full-regexp (mapconcat 'identity patterns "")))
+        (if (string-empty-p string)
+            (all-completions "" table pred)
+          (cl-remove-if-not
+           (lambda (candidate)
+             (let ((case-fold-search completion-ignore-case))
+               (and (cl-every (lambda (word)
+                                (string-match-p
+                                 (concat "\\b.*" (regexp-quote word))
+                                 candidate))
+                              words)
+                    t)))
+           (all-completions "" table pred)))))
+
+    (add-to-list 'completion-styles-alist
+                 '(simple-orderless simple-orderless-completion
+                                    simple-orderless-completion))
+
+    (defun setup-minibuffer-completion-styles ()
+      "Use orderless completion in minibuffer, regular completion elsewhere."
+      ;; For minibuffer: use orderless first, then fallback to flex and basic
+      (setq-local completion-styles '(basic simple-orderless flex substring)))
+
+    (add-hook 'minibuffer-setup-hook #'setup-minibuffer-completion-styles)
+    (message ">>> emacs-solo: simple orderless loaded!"))
+
+  (emacs-solo/setup-simple-orderless)
+
+
+  ;; Makes C-g behave (as seen on https://emacsredux.com/blog/2025/06/01/let-s-make-keyboard-quit-smarter/)
+  (define-advice keyboard-quit
+      (:around (quit) quit-current-context)
+    "Quit the current context.
+
+When there is an active minibuffer and we are not inside it close
+it.  When we are inside the minibuffer use the regular
+`minibuffer-keyboard-quit' which quits any active region before
+exiting.  When there is no minibuffer `keyboard-quit' unless we
+are defining or executing a macro."
+    (if (active-minibuffer-window)
+        (if (minibufferp)
+            (minibuffer-keyboard-quit)
+          (abort-recursive-edit))
+      (unless (or defining-kbd-macro
+                  executing-kbd-macro)
+        (funcall-interactively quit))))
+
   ;; Keep the cursor out of the read-only portions of the.minibuffer
   (setq minibuffer-prompt-properties
         '(read-only t intangible t cursor-intangible t face minibuffer-prompt))
@@ -1539,6 +1615,15 @@ and restart Flymake to apply the changes."
   :hook
   (newsticker-treeview-mode-hook . (lambda ()
                                      (define-key newsticker-treeview-mode-map
+                                                 (kbd "C")
+                                                 'emacs-solo/fetch-yt-captions-to-buffer)
+                                     (define-key newsticker-treeview-list-mode-map
+                                                 (kbd "C")
+                                                 'emacs-solo/fetch-yt-captions-to-buffer)
+                                     (define-key newsticker-treeview-item-mode-map
+                                                 (kbd "C")
+                                                 'emacs-solo/fetch-yt-captions-to-buffer)
+                                     (define-key newsticker-treeview-mode-map
                                                  (kbd "V")
                                                  'emacs-solo/newsticker-play-yt-video-from-buffer)
                                      (define-key newsticker-treeview-list-mode-map
@@ -1546,8 +1631,115 @@ and restart Flymake to apply the changes."
                                                  'emacs-solo/newsticker-play-yt-video-from-buffer)
                                      (define-key newsticker-treeview-item-mode-map
                                                  (kbd "V")
-                                                 'emacs-solo/newsticker-play-yt-video-from-buffer)))
+                                                 'emacs-solo/newsticker-play-yt-video-from-buffer)
+                                     (define-key newsticker-treeview-mode-map
+                                                 (kbd "E")
+                                                 #'emacs-solo/newsticker-eww-current-article)
+                                     (define-key newsticker-treeview-list-mode-map
+                                                 (kbd "E")
+                                                 #'emacs-solo/newsticker-eww-current-article)
+                                     (define-key newsticker-treeview-item-mode-map
+                                                 (kbd "E")
+                                                 #'emacs-solo/newsticker-eww-current-article)))
   :init
+  (defun emacs-solo/clean-subtitles (buffer-name)
+    "Clean SRT subtitles while perfectly preserving ^M in text (unless at line end)."
+    (with-current-buffer (get-buffer-create buffer-name)
+      ;; First: Remove SRT metadata (sequence numbers + timestamps)
+      (goto-char (point-min))
+      (while (re-search-forward "^[0-9]+\n[0-9:,]+ --> [0-9:,]+\n" nil t)
+        (replace-match ""))
+
+      ;; Second: Remove empty/whitespace-only lines (including ^M)
+      (goto-char (point-min))
+      (while (re-search-forward "^[ \t\r]*\n" nil t)
+        (replace-match ""))
+
+      ;; Third: Remove lines ending with ^M (carriage return)
+      (goto-char (point-min))
+      (while (re-search-forward ".*\r$" nil t)
+        (replace-match ""))
+
+      ;; Fourth: Remove duplicate consecutive lines
+      (let ((prev-line nil))
+        (goto-char (point-min))
+        (while (not (eobp))
+          (let* ((bol (line-beginning-position))
+                 (eol (line-end-position))
+                 (current-line (buffer-substring bol eol)))
+            (if (equal current-line prev-line)
+                (delete-region bol (line-beginning-position 2))
+              (setq prev-line current-line)
+              (forward-line 1)))))
+
+      ;; Final cleanup: Remove leading/trailing blank lines
+      (goto-char (point-min))
+      (when (looking-at "\n+")
+        (delete-region (point) (match-end 0)))))
+
+  (defun emacs-solo/fetch-yt-captions-to-buffer ()
+    "Fetch YouTube captions with original auto-subs and display in buffer."
+    (interactive)
+    (let ((window (get-buffer-window "*Newsticker Item*" t)))
+      (if window
+          (progn
+            (select-window window)
+            (save-excursion
+              (goto-char (point-min))
+              (when (re-search-forward "^\\* videoId: \\(\\w+\\)" nil t)
+                (let* ((video-id (match-string 1))
+                       (video-url (format "https://www.youtube.com/watch?v=%s" video-id))
+                       (temp-dir (make-temp-file "emacs-yt-subs-" t "/"))
+                       (buffer-name (format "*YT Captions: %s*" video-id)))
+
+                  ;; Create temp directory and buffer
+                  (make-directory temp-dir t)
+                  (with-current-buffer (get-buffer-create buffer-name)
+                    (erase-buffer)
+                    (special-mode)
+                    (setq buffer-read-only t)
+                    (setq-local truncate-lines t)
+                    (let ((map (make-sparse-keymap)))
+                      (set-keymap-parent map special-mode-map)
+                      (define-key map (kbd "q") #'quit-window)
+                      (define-key map (kbd "n") #'forward-line)
+                      (define-key map (kbd "p") #'previous-line)
+                      (use-local-map map)))
+
+                  ;; Run yt-dlp process
+                  (make-process
+                   :name "yt-dlp-fetch-subs"
+                   :buffer nil
+                   :command `("yt-dlp"
+                              "--write-auto-subs"
+                              "--sub-lang" ".*-orig"
+                              "--convert-subs" "srt"
+                              "--skip-download"
+                              "--no-clean-infojson"
+                              "-o" ,(concat temp-dir "temp.%(ext)s")
+                              ,video-url)
+                   :sentinel
+                   (lambda (process _event)
+                     (when (eq (process-status process) 'exit)
+                       (if (zerop (process-exit-status process))
+                           (let ((subs-file (car (directory-files temp-dir t ".*-orig.*"))))
+                             (if (and subs-file (file-exists-p subs-file))
+                                 (with-current-buffer (get-buffer-create buffer-name)
+                                   (let ((inhibit-read-only t))
+                                     (erase-buffer)
+                                     (insert-file-contents subs-file)
+                                     (emacs-solo/clean-subtitles buffer-name))
+                                   (switch-to-buffer-other-window (current-buffer))
+                                   (message "Loaded subtitles: %s" (file-name-nondirectory subs-file))
+                                   (delete-directory temp-dir t))
+                               (message "No -orig subtitles found in %s" temp-dir)
+                               (delete-directory temp-dir t)))
+                         (message "Failed to fetch subtitles")
+                         (delete-directory temp-dir t))))))))
+            (message "No *Newsticker Item* buffer found.")))))
+
+
+
   (defun emacs-solo/newsticker-play-yt-video-from-buffer ()
     "Focus the window showing '*Newsticker Item*' and play the video."
     (interactive)
@@ -1561,7 +1753,16 @@ and restart Flymake to apply the changes."
                 (let ((video-id (match-string 1)))
                   (start-process "mpv-video" nil "mpv" (format "https://www.youtube.com/watch?v=%s" video-id))
                   (message "Playing with mpv: %s" video-id))))))
-      (message "No window showing *Newsticker Item* buffer."))))
+      (message "No window showing *Newsticker Item* buffer.")))
+
+  (defun emacs-solo/newsticker-eww-current-article ()
+    "Open the news item at point in EWW in the same window."
+    (interactive)
+    (with-current-buffer (newsticker--treeview-list-buffer)
+      (let ((url (get-text-property (point) :nt-link)))
+        (when url
+          (eww url)
+          (switch-to-buffer (get-buffer "*eww*")))))))
 
 
 ;;; ELEC_PAIR
@@ -2234,7 +2435,6 @@ If MANUAL is non-nil, the function was called interactively."
 ;;  Custom functions to set/unset transparency
 ;;
 (use-package emacs-solo-transparency
-  :if emacs-solo-enable-transparency
   :ensure nil
   :no-require t
   :defer t
@@ -2256,6 +2456,7 @@ If MANUAL is non-nil, the function was called interactively."
     "Set frame transparency. If FRAME is nil, applies to all existing frames."
     (interactive)
     (unless (display-graphic-p frame)
+      (emacs-solo/clear-terminal-background-color)
       (add-hook 'window-setup-hook 'emacs-solo/clear-terminal-background-color)
       (add-hook 'ef-themes-post-load-hook 'emacs-solo/clear-terminal-background-color))
 
@@ -2279,8 +2480,10 @@ If MANUAL is non-nil, the function was called interactively."
     (dolist (frame (frame-list))
       (set-frame-parameter frame 'alpha-background 100)))
 
-  (add-hook 'after-init-hook #'emacs-solo/transparency-set)
-  (add-hook 'after-make-frame-functions #'emacs-solo/transparency-set))
+  (when emacs-solo-enable-transparency
+
+    (add-hook 'after-init-hook #'emacs-solo/transparency-set)
+    (add-hook 'after-make-frame-functions #'emacs-solo/transparency-set)))
 
 
 ;;; EMACS-SOLO-MODE-LINE
@@ -2340,6 +2543,7 @@ Replacing `Git-' with a branch symbol."
           flyspell-mode
           smooth-scroll-mode
           outline-minor-mode
+          completion-preview-mode
           which-key-mode))
 
   (defvar emacs-solo-hidden-minor-modes mode-line-collapse-minor-modes)
@@ -2799,7 +3003,7 @@ A compound word includes letters, numbers, `-`, and `_`."
                   (lambda ()
                     (when (and buffer-file-name ; only if it's visiting a file
                                (not (string-match-p "^\\*" (buffer-name)))) ; avoid *scratch*, etc.
-                      (message "running on buffer %s" (buffer-name))
+                      (message "[emacs-solo-highlight-keywords-mode]: running on buffer %s" (buffer-name))
                       (run-with-idle-timer 1 nil #'emacs-solo/highlight-keywords-mode-on)))))
 
 
@@ -2934,9 +3138,10 @@ Marks lines as added, deleted, or changed."
 
   (defun emacs-solo/git-gutter-on ()
     (interactive)
-    (emacs-solo/git-gutter-add-mark)
     (add-hook 'find-file-hook #'emacs-solo/timed-git-gutter-on)
-    (add-hook 'after-save-hook #'emacs-solo/git-gutter-add-mark))
+    (add-hook 'after-save-hook #'emacs-solo/git-gutter-add-mark)
+    (when (not (string-match-p "^\\*" (buffer-name))) ; avoid *scratch*, etc.
+      (emacs-solo/git-gutter-add-mark)))
 
   (global-set-key (kbd "M-9") 'emacs-solo/goto-previous-hunk)
   (global-set-key (kbd "M-0") 'emacs-solo/goto-next-hunk)
@@ -3177,6 +3382,7 @@ Directories themselves are excluded from the final list."
                       (cl-remove-if #'file-directory-p files))
              else if (file-regular-p item) ; Ensure only regular files are included
              collect item))
+
   (defun emacs-solo/dired-do-replace-regexp-as-diff (from to &optional delimited)
     "Do `replace-regexp' of FROM with TO as diff, on all marked files and directories.
 If a marked item is a directory, all files within it (recursively) are included.
@@ -3910,6 +4116,7 @@ If a stream is already playing, kill it before starting a new one."
 ;;  A hacky eldoc-box inspired by the famous casouri package
 ;;
 (use-package emacs-solo-eldoc-box
+  :if emacs-solo-enable-eldoc-box
   :ensure nil
   :no-require t
   :defer t
@@ -3933,10 +4140,11 @@ If a stream is already playing, kill it before starting a new one."
            (desired-lines (min max-lines (max min-lines line-count)))
            (frame (make-frame
                    `((parent-frame . ,parent)
-                     (no-accept-focus . nil)
-                     (no-focus-on-map . nil)
+                     (no-accept-focus . t)
+                     (no-focus-on-map . t)
                      (internal-border-width . 1)
                      (undecorated . t)
+                     (fullscreen . nil)
                      (left . ,(+ (window-pixel-left) (car (posn-x-y (posn-at-point)))))
                      (top . ,(+ (cdr (posn-x-y (posn-at-point)))
                                 (frame-char-height)))
@@ -3960,33 +4168,28 @@ If a stream is already playing, kill it before starting a new one."
                      (drag-internal-border . t)
                      (no-special-glyphs . t)
                      (name . "emacs-solo-eldoc-box")))))
+
+      ;; Turn on markdown-ts-mode on some modes
       (with-current-buffer buffer
-        ;; Modes for eldoc-box frame
         (let ((supported-markdown-modes '(typescript-ts-mode tsx-ts-mode js-ts-mode)))
           (when (memq origin-major-mode supported-markdown-modes)
             (markdown-ts-mode)
             (font-lock-ensure)))
-        (setq mode-line-format nil)
         (visual-line-mode 1)
-        (display-line-numbers-mode -1)
+        (display-line-numbers-mode -1))
 
-        ;; Keybindings when eldoc-box is opened and focoused
-        ;;
-        ;; FIXME: maybe a nicer idea would add this as we do with fn `simple-eldoc-box--enable-auto-close'
-        ;;        and avoid "focusing" the childframe all togheter
-        (let ((map (make-sparse-keymap)))
-          (define-key map (kbd "q") #'simple-eldoc-box--delete-frame)
-          (define-key map (kbd "C-g") #'simple-eldoc-box--delete-frame)
-          (define-key map (kbd "o")
-                      (lambda ()
-                        (interactive)
-                        (run-with-timer 0.05 nil (lambda () (eldoc-doc-buffer t)))))
-          (use-local-map map)))
+      ;; Force-disable mode line in all windows of this frame
+      (walk-windows
+       (lambda (win)
+         (when (eq (window-frame win) frame)
+           (set-window-parameter win 'mode-line-format 'none)
+           (set-window-parameter win 'header-line-format 'none))
+         nil frame))
+
       (set-window-buffer (frame-root-window frame) buffer)
-
       (set-frame-parameter frame 'visibility t)
 
-      ;; Darken background
+      ;; Darker background
       (let* ((bg (face-background 'default nil parent))
              (rgb (color-name-to-rgb bg))
              (darker (apply #'color-rgb-to-hex
@@ -3996,7 +4199,21 @@ If a stream is already playing, kill it before starting a new one."
           (face-remap-add-relative 'default `(:background ,darker))))
 
       (setq simple-eldoc-box--child-frame frame)
+
       (simple-eldoc-box--enable-auto-close)
+
+      (let ((key (read-key "Eldoc Box: Press q(uit) / o(pen) doc on new window")))
+        (cond
+         ((equal key ?q)
+          (simple-eldoc-box--delete-frame))
+         ((equal key ?o)
+          (simple-eldoc-box--delete-frame)
+          (run-with-idle-timer 0.05 nil
+                               (lambda ()
+                                 (eldoc-doc-buffer t))))
+         (t
+          (simple-eldoc-box--delete-frame))))
+
       frame))
 
   ;; CLOSES THE BOX FRAME
