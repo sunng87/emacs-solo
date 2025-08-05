@@ -118,6 +118,12 @@ It is recommended you have this programs in your system:
   =grep-command=.
 
 
+- =ghostscript=
+
+  This is necessary if you want to be able to use =doc-view= to see
+  documents like PDFs.
+
+
 - =gls=
 
   MacOS comes with an implementation of =ls= that misses some nice
@@ -153,11 +159,11 @@ It is recommended you have this programs in your system:
   Only needed if you'd like to use =emacs-solo/ollama-run-model=.
 
 
+In order to proper copy/paste from terminals (TUI), you need:
+
 - =pbcopy/pbpaste= (macos)
 - =wl-copy/wl-paste= (Linux with Wayland)
 - =xclip= (Linux with Xorg)
-
-  In order to proper copy/paste from terminals, you need:
 
 
 ** Installation
@@ -353,5 +359,9 @@ From Emacs 31, we have after =C-x v == a new =C-c RET n=
 
 From =C-x v L=, you can press =e= and you'll be editing the commit
 message. This is available from Emacs 31 onward.
+
+*** 14.) How do I amend commits?
+
+From =C-x v v=, you can press =C-c C-e= and you'll be on 'amend' mode.
 
 #+html:</details>
