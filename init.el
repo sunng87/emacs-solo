@@ -63,14 +63,14 @@
   :type 'boolean
   :group 'emacs-solo)
 
-(defcustom emacs-solo-enable-eshell-icons t
-  "Enable `emacs-solo-eshell-icons'."
-  :type 'boolean
-  :group 'emacs-solo)
-
-(defcustom emacs-solo-enable-dired-icons t
-  "Enable `emacs-solo-dired-icons'."
-  :type 'boolean
+(defcustom emacs-solo-enabled-icons
+  '(dired eshell ibuffer)
+  "List of Emacs Solo icon features that are enabled.
+Possible values include `dired', `eshell', `ibuffer', etc."
+  :type '(set :tag "Enabled Emacs Solo icon features"
+              (const :tag "Dired Icons" dired)
+              (const :tag "Eshell Icons" eshell)
+              (const :tag "Ibuffer Icons" ibuffer))
   :group 'emacs-solo)
 
 (defcustom emacs-solo-enable-dired-gutter t
@@ -103,15 +103,25 @@
   :type 'boolean
   :group 'emacs-solo)
 
-(defcustom emacs-solo-use-custom-theme t
-  "Enable `emacs-solo' customizations to modus-theme.
+(defcustom emacs-solo-use-custom-theme 'crafters
+  "Select which `emacs-solo` customization theme to use.
 
-IMPORTANT NOTE: If you'd like to disable this custom theme, also check the
-`emacs-solo-avoid-flash-options' variable: turn it OFF or customize its
-colors to match your new theme."
-  :type 'boolean
+- nil: Disable custom theme
+- 'catppuccin: Use customizations for Catppuccin
+- 'crafters: Use customizations for the Crafters theme
+
+IMPORTANT NOTE: If you disable this or choose another theme, also check
+`emacs-solo-avoid-flash-options` to ensure compatibility."
+  :type '(choice
+          (const :tag "Disabled" nil)
+          (const :tag "Catppuccin" catppuccin)
+          (const :tag "Crafters" crafters))
   :group 'emacs-solo)
 
+(defcustom emacs-solo-enable-completion-box nil
+  "Enable `emacs-solo-completion-box'."
+  :type 'boolean
+  :group 'emacs-solo)
 
 ;;; ┌──────────────────── GENERAL EMACS CONFIG
 ;;; │ EMACS
@@ -145,7 +155,7 @@ colors to match your new theme."
   (completion-ignore-case t)
   (completions-detailed t)
   (delete-by-moving-to-trash t)
-  (display-line-numbers-width 3)
+  (display-line-numbers-width 4)
   (display-line-numbers-widen t)
   (display-fill-column-indicator-warning nil) ; EMACS-31
   (delete-selection-mode 1)
@@ -153,6 +163,7 @@ colors to match your new theme."
   (find-ls-option '("-exec ls -ldh {} +" . "-ldh"))  ; find-dired results with human readable sizes
   (frame-resize-pixelwise t)
   (global-auto-revert-non-file-buffers t)
+  (global-goto-address-mode t)
   (help-window-select t)
   (history-length 300)
   (inhibit-startup-message t)
@@ -163,6 +174,7 @@ colors to match your new theme."
   (kill-region-dwim 'emacs-word)  ; EMACS-31
   (create-lockfiles nil)   ; No lock files
   (make-backup-files nil)  ; No backup files
+  (native-comp-async-on-battery-power nil)  ; No compilations when on battery EMACS-31
   (pixel-scroll-precision-mode t)
   (pixel-scroll-precision-use-momentum nil)
   (ring-bell-function 'ignore)
@@ -198,6 +210,7 @@ colors to match your new theme."
   (tab-always-indent 'complete)
   (tab-width 4)
   (treesit-font-lock-level 4)
+  (treesit-auto-install-grammar t) ; EMACS-31
   (truncate-lines t)
   (undo-limit (* 13 160000))
   (undo-strong-limit (* 13 240000))
@@ -234,27 +247,22 @@ colors to match your new theme."
     (setq insert-directory-program "gls")
     (setq mac-command-modifier 'meta)
 
-    (set-face-attribute 'default nil :family "JetBrainsMono Nerd Font" :height 130)
+    ;; Default font
+    (set-face-attribute 'default nil
+                        :family "JetBrainsMono Nerd Font"
+                        :height 130)
 
+    ;; JetBrainsMono Nerd Font glyphs (icons/powerline symbols)
     (set-fontset-font t '(#xe0b0 . #xe0bF)
-                      (font-spec :family "JetBrainsMono Nerd Font" :size 11))
+                      (font-spec :family "JetBrainsMono Nerd Font"))
 
-    (set-fontset-font t '(#x2600 . #x26FF) ; Miscellaneous Symbols (includes ☕ ⚡)
-                      (font-spec :family "Apple Color Emoji" :size 8))
-    (set-fontset-font t '(#x2700 . #x27BF) ; Dingbats
-                      (font-spec :family "Apple Color Emoji" :size 8))
-    (set-fontset-font t '(#x1F000 . #x1FAFF) ; Full emoji range
-                      (font-spec :family "Apple Color Emoji" :size 8))
-    (set-fontset-font t '(#x1F100 . #x1F1FF) ; Enclosed Alphanumeric Supplement (🅲, etc.)
-                      (font-spec :family "Apple Color Emoji" :size 8))
-    (set-fontset-font t '(#x1F300 . #x1F5FF) ; Miscellaneous Symbols and Pictographs
-                      (font-spec :family "Apple Color Emoji" :size 8))
-    (set-fontset-font t '(#x1F600 . #x1F64F) ; Emoticons
-                      (font-spec :family "Apple Color Emoji" :size 8))
-    (set-fontset-font t '(#x1F680 . #x1F6FF) ; Transport & Map symbols
-                      (font-spec :family "Apple Color Emoji" :size 8))
-    (set-fontset-font t '(#x1F700 . #x1F77F) ; Alchemical Symbols
-                      (font-spec :family "Apple Color Emoji" :size 8)))
+    ;; Assign Apple Color Emoji for the general emoji range
+    ;; Covers most pictographs, symbols, flags, etc.
+    (set-fontset-font t 'emoji (font-spec :family "Apple Color Emoji") nil 'append)
+
+    ;; Rescale emoji font so it matches JetBrainsMono line height
+    (add-to-list 'face-font-rescale-alist '("Apple Color Emoji" . 0.8)))
+
 
   ;; Save manual customizations to other file than init.el
   (setq custom-file (locate-user-emacs-file "custom-vars.el"))
@@ -469,9 +477,9 @@ colors to match your new theme."
        (lambda () (search-backward "@") (delete-char 1)))
 
       ;; Emojis for context markers
-      ("todo"  "⚙ TODO:")
+      ("todo"  "👷 TODO:")
       ("fixme" "🔧 FIXME:")
-      ("note"  "🗒 NOTE:")
+      ("note"  "ℹ️ NOTE:")
 
       ;; HTML entities
       ("nb" "&nbsp;")
@@ -1199,7 +1207,7 @@ away from the bottom.  Counts wrapped lines as real lines."
   ;;
   (setopt eshell-banner-message
           (concat
-           (propertize " ✨ Welcome to the Emacs Solo Shell ✨\n\n" 'face '(:weight bold :foreground "#f9e2af"))
+           (propertize "   Welcome to the Emacs Solo Shell  \n\n" 'face '(:weight bold :foreground "#f9e2af"))
            (propertize " C-c t" 'face '(:foreground "#89b4fa" :weight bold)) " - toggles between prompts (full / minimum)\n"
            (propertize " C-c T" 'face '(:foreground "#89b4fa" :weight bold)) " - toggles between full prompts (lighter / heavier)\n"
            (propertize " C-c l" 'face '(:foreground "#89b4fa" :weight bold)) " - searches history\n"
@@ -1358,63 +1366,136 @@ Check `emacs-solo/eshell-full-prompt' for more info.")
     (when (derived-mode-p 'eshell-mode)
       (eshell-reset)))
 
+  (defun enabled-icons-p ()
+    (memq 'eshell emacs-solo-enabled-icons))
+
+  (unless (eq emacs-solo-use-custom-theme 'catppuccin)
+    (defvar eshell-solo/color-bg-dark "#212234")
+    (defvar eshell-solo/color-bg-mid "#45475A")
+    (defvar eshell-solo/color-fg-user "#89b4fa")
+    (defvar eshell-solo/color-fg-host "#b4befe")
+    (defvar eshell-solo/color-fg-dir "#A6E3A1")
+    (defvar eshell-solo/color-fg-git "#F9E2AF"))
+
+  (when (eq emacs-solo-use-custom-theme 'catppuccin)
+    (defvar eshell-solo/color-bg-dark "#363a4f")
+    (defvar eshell-solo/color-bg-mid  "#494d64")
+    (defvar eshell-solo/color-fg-user "#89b4fa")
+    (defvar eshell-solo/color-fg-host "#b4befe")
+    (defvar eshell-solo/color-fg-dir  "#a6e3a1")
+    (defvar eshell-solo/color-fg-git  "#f9e2af"))
+
+
+  (unless (enabled-icons-p)
+    (defvar emacs-solo/eshell-icons
+      '((arrow-left        . "")
+        (arrow-right       . "")
+        (success           . "『")
+        (failure           . "『")
+        (user-local        . "")
+        (user-remote       . "")
+        (host-local        . "")
+        (host-remote       . "")
+        (time              . "")
+        (folder            . "")
+        (branch            . " Git:")
+        (modified          . "M")
+        (untracked         . "U")
+        (conflict          . "X")
+        (git-merge         . "M")
+        (git-ahead         . "A")
+        (git-behind        . "B"))
+      "Alist of all icons used in the Eshell prompt."))
+
+  (when (enabled-icons-p)
+    (defvar emacs-solo/eshell-icons
+      '((arrow-left        . "")
+        (arrow-right       . "")
+        (success           . "🟢")
+        (failure           . "🔴")
+        (user-local        . "🧙")
+        (user-remote       . "👽")
+        (host-local        . "💻")
+        (host-remote       . "🌐")
+        (time              . "🕒")
+        (folder            . "📁")
+        (branch            . "")
+        (modified          . "✏️")
+        (untracked         . "✨")
+        (conflict          . "⚔️")
+        (git-merge         . "🔀")
+        (git-ahead         . "⬆️")
+        (git-behind        . "⬇️"))
+      "Alist of all icons used in the Eshell prompt."))
+
   (setopt eshell-prompt-function
           (lambda ()
             (if emacs-solo/eshell-full-prompt
                 ;; Full-blown prompt
                 (concat
-                 (propertize "" 'face `(:foreground "#212234"))
+                 (propertize
+                  (assoc-default 'arrow-left emacs-solo/eshell-icons) 'face `(:foreground ,eshell-solo/color-bg-dark))
 
                  (propertize
-                  (if (> eshell-last-command-status 0) " 🔴 " " 🟢 ")
-                  'face `(:background "#212234"))
+                  (if (> eshell-last-command-status 0)
+                      (concat " " (assoc-default 'failure emacs-solo/eshell-icons)  " ")
+                    (concat " " (assoc-default 'success emacs-solo/eshell-icons)  " "))
+                  'face `(:background ,eshell-solo/color-bg-dark))
 
                  (propertize (concat (number-to-string eshell-last-command-status) " ")
-                             'face `(:background "#212234"))
+                             'face `(:background ,eshell-solo/color-bg-dark))
 
-                 (propertize "" 'face `(:foreground "#212234" :background "#45475A"))
+                 (propertize (assoc-default 'arrow-right emacs-solo/eshell-icons)
+                             'face `(:foreground ,eshell-solo/color-bg-dark :background ,eshell-solo/color-bg-mid))
 
-                 (propertize
-                  (let ((remote-user (file-remote-p default-directory 'user))
-                        (is-remote (file-remote-p default-directory)))
-                    (concat
-                     (if is-remote "👽 " "🧙 ")
-                     (or remote-user (user-login-name))
-                     " "))
-                  'face `(:foreground "#89b4fa" :background "#45475A"))
+                 (propertize (let ((remote-user (file-remote-p default-directory 'user))
+                                   (is-remote (file-remote-p default-directory)))
+                               (concat
+                                (if is-remote
+                                    (concat (assoc-default 'user-remote emacs-solo/eshell-icons)  " ")
+                                  (concat (assoc-default 'user-local emacs-solo/eshell-icons)  " "))
+                                (or remote-user (user-login-name))
+                                " "))
+                             'face `(:foreground ,eshell-solo/color-fg-user
+                                                 :background ,eshell-solo/color-bg-mid))
 
-                 (propertize "" 'face `(:foreground "#45475A" :background "#212234"))
+                 (propertize (assoc-default 'arrow-right emacs-solo/eshell-icons) 'face
+                             `(:foreground ,eshell-solo/color-bg-mid :background ,eshell-solo/color-bg-dark))
 
                  (let ((remote-host (file-remote-p default-directory 'host))
                        (is-remote (file-remote-p default-directory)))
-                   (propertize
-                    (concat (if is-remote " 🌐 " " 💻 ")
-                            (or remote-host (system-name))
-                            " ")
-                    'face `(:background "#212234" :foreground "#b4befe")))
+                   (propertize (concat (if is-remote
+                                           (concat " " (assoc-default 'host-remote emacs-solo/eshell-icons)  " ")
+                                         (concat " " (assoc-default 'host-local emacs-solo/eshell-icons)  " "))
+                                       (or remote-host (system-name)) " ")
+                               'face `(:background ,eshell-solo/color-bg-dark  :foreground ,eshell-solo/color-fg-host)))
 
-                 (propertize "" 'face `(:foreground "#212234" :background "#45475A"))
+                 (propertize (assoc-default 'arrow-right emacs-solo/eshell-icons) 'face
+                             `(:foreground ,eshell-solo/color-bg-dark :background ,eshell-solo/color-bg-mid))
 
-                 (propertize
-                  (concat " 🕒 " (format-time-string "%H:%M:%S" (current-time)) " ")
-                  'face `(:foreground "#89b4fa" :background "#45475A"))
+                 (propertize (concat " " (assoc-default 'time emacs-solo/eshell-icons)  " "
+                                     (format-time-string "%H:%M:%S" (current-time)) " ")
+                             'face `(:foreground ,eshell-solo/color-fg-user :background ,eshell-solo/color-bg-mid))
 
-                 (propertize "" 'face `(:foreground "#45475A" :background "#212234"))
+                 (propertize (assoc-default 'arrow-right emacs-solo/eshell-icons)
+                             'face `(:foreground ,eshell-solo/color-bg-mid :background ,eshell-solo/color-bg-dark))
 
-                 (propertize
-                  (concat " 📁 " (if (>= (length (eshell/pwd)) 40)
-                                     (concat "…" (car (last (butlast (split-string (eshell/pwd) "/") 0))))
-                                   (abbreviate-file-name (eshell/pwd))) " ")
-                  'face `(:background "#212234" :foreground "#A6E3A1"))
+                 (propertize (concat " " (assoc-default 'time emacs-solo/eshell-icons)  " "
+                                     (if (>= (length (eshell/pwd)) 40)
+                                         (concat "…" (car (last (butlast (split-string (eshell/pwd) "/") 0))))
+                                       (abbreviate-file-name (eshell/pwd))) " ")
+                             'face `(:background ,eshell-solo/color-bg-dark :foreground ,eshell-solo/color-fg-dir))
 
-                 (propertize "\n" 'face `(:foreground "#212234"))
+                 (propertize (concat (assoc-default 'arrow-right emacs-solo/eshell-icons) "\n")
+                             'face `(:foreground ,eshell-solo/color-bg-dark))
 
                  (when (and (fboundp 'vc-git-root) (vc-git-root default-directory))
                    (concat
-                    (propertize "" 'face `(:foreground "#212234"))
+                    (propertize (assoc-default 'arrow-left emacs-solo/eshell-icons) 'face `(:foreground ,eshell-solo/color-bg-dark))
                     (propertize
                      (concat
-                      "  " (car (vc-git-branches))
+                      (concat " " (assoc-default 'branch emacs-solo/eshell-icons)  " ")
+                      (car (vc-git-branches))
 
                       (when emacs-solo/eshell-full-prompt-resource-intensive
                         (let* ((branch (car (vc-git-branches)))
@@ -1425,37 +1506,28 @@ Check `emacs-solo/eshell-full-prompt' for more info.")
                                        (shell-command-to-string
                                         (format "git rev-list --count HEAD..origin/%s" branch)))))
                           (concat
-                           (when (> ahead 0) (format " ⬇️%d" ahead))
+                           (when (> ahead 0) (format (concat " " (assoc-default 'git-ahead emacs-solo/eshell-icons) "%d") ahead))
+                           (when (> behind 0) (format (concat " " (assoc-default 'git-behind emacs-solo/eshell-icons) "%d") behind))
+                           (when (and (> ahead 0) (> behind 0))
+                             (concat "  " (assoc-default 'git-merge emacs-solo/eshell-icons)))))
 
-                           (when (> behind 0) (format " ⬆️%d" behind))
-
-                           (when (and (> ahead 0) (> behind 0)) "  🔀")))
-
-                        (let ((modified (length (split-string
-                                                 (shell-command-to-string "git ls-files --modified")
-                                                 "\n" t)))
-                              (untracked (length (split-string
-                                                  (shell-command-to-string
-                                                   "git ls-files --others --exclude-standard")
-                                                  "\n" t)))
-                              (conflicts (length (split-string
-                                                  (shell-command-to-string
-                                                   "git diff --name-only --diff-filter=U")
-                                                  "\n" t))))
+                        (let ((modified (length (split-string (shell-command-to-string "git ls-files --modified") "\n" t)))
+                              (untracked (length (split-string (shell-command-to-string "git ls-files --others --exclude-standard") "\n" t)))
+                              (conflicts (length (split-string (shell-command-to-string "git diff --name-only --diff-filter=U") "\n" t))))
                           (concat
-                           (if (> modified 0) (format " ✏️%d" modified))
-                           (if (> untracked 0) (format " ✨%d" untracked))
-                           (if (> conflicts 0) (format " ⚔️%d" conflicts)))))
-
+                           (if (> modified 0) (format (concat " " (assoc-default 'modified emacs-solo/eshell-icons) "%d") modified))
+                           (if (> untracked 0) (format (concat " " (assoc-default 'untracked emacs-solo/eshell-icons) "%d") untracked))
+                           (if (> conflicts 0) (format (concat " " (assoc-default 'conflict emacs-solo/eshell-icons) "%d") conflicts)))))
                       " ")
-                     'face `(:background "#212234" :foreground "#F9E2AF"))
+                     'face `(:background ,eshell-solo/color-bg-dark :foreground ,eshell-solo/color-fg-git))
 
-                    (propertize "\n" 'face `(:foreground "#212234"))))
+                    (propertize (concat (assoc-default 'arrow-right emacs-solo/eshell-icons) "\n") 'face `(:foreground ,eshell-solo/color-bg-dark))))
 
                  (propertize emacs-solo/eshell-lambda-symbol 'face font-lock-keyword-face))
 
               ;; Minimal prompt
               (propertize emacs-solo/eshell-lambda-symbol 'face font-lock-keyword-face))))
+
 
   (setq eshell-prompt-regexp emacs-solo/eshell-lambda-symbol)
 
@@ -1506,6 +1578,7 @@ Check `emacs-solo/eshell-full-prompt' for more info.")
   :defer nil
   :config
   (setopt
+   vc-auto-revert-mode t              ; EMACS-31
    vc-git-diff-switches '("--patch-with-stat" "--histogram")  ;; add stats to `git diff'
    vc-git-log-switches '("--stat")                            ;; add stats to `git log'
    vc-git-log-edit-summary-target-len 50
@@ -1514,7 +1587,7 @@ Check `emacs-solo/eshell-full-prompt' for more info.")
    vc-git-revision-complete-only-branches nil
    vc-annotate-display-mode 'scale
    add-log-keep-changes-together t
-   vc-dir-hide-up-to-date-on-revert t ;; EMACS-31
+   vc-dir-hide-up-to-date-on-revert t ; EMACS-31
    vc-make-backup-files nil)                                  ;; Do not backup version controlled files
 
   (with-eval-after-load 'vc-annotate
@@ -1755,6 +1828,8 @@ Otherwise, open the repository's main page."
 (use-package diff-mode
   :ensure nil
   :defer t
+  :bind (:map diff-mode-map
+              ("M-o" . other-window))
   :config
   (setq diff-default-read-only t)
   (setq diff-advance-after-apply-hunk t)
@@ -2235,6 +2310,7 @@ are defining or executing a macro."
    ;; Org styling, hide markup etc.
    org-hide-emphasis-markers t
    org-pretty-entities t
+   org-use-sub-superscripts nil ;; We want the above but no _ subscripts ^ superscripts
 
    ;; Agenda styling
    org-agenda-tags-column 0
@@ -2269,6 +2345,7 @@ are defining or executing a macro."
   (speedbar-directory-unshown-regexp "^$")
   (speedbar-indentation-width 2)
   (speedbar-use-images t)
+  (speedbar-update-flag nil)
   :config
   (setq speedbar-expand-image-button-alist
         '(("<+>" . ezimage-directory) ;; previously ezimage-directory-plus
@@ -2301,6 +2378,7 @@ are defining or executing a macro."
   ;; :hook (after-init-hook . display-time-mode) ;; If we'd like to see it on the mode-line
   :custom
   (world-clock-time-format "%A %d %B %r %Z")
+  (world-clock-sort-order "%FT%T") ; EMACS-31
   (display-time-day-and-date t)
   (display-time-default-load-average nil)
   (display-time-mail-string "")
@@ -2447,9 +2525,148 @@ are defining or executing a macro."
      ("ChatGPT" . [simple-query "https://chatgpt.com" "https://chatgpt.com/?q=" ""]))))
 
 
-;;; │ THEMES
+;;; ┌──────────────────── THEMES
+;;; │ Cattpuccin Mocha Based Theme (hacked Modus)
+;;
+;; This tries to follow: https://github.com/catppuccin/catppuccin/blob/main/docs/style-guide.md
+;; With the colors from: https://github.com/catppuccin/catppuccin/ (Mocha)
 (use-package modus-themes
-  :if emacs-solo-use-custom-theme
+  :if (eq emacs-solo-use-custom-theme 'catppuccin)
+  :ensure nil
+  :defer t
+  :custom
+  (modus-themes-italic-constructs t)
+  (modus-themes-bold-constructs t)
+  (modus-themes-mixed-fonts nil)
+  (modus-themes-prompts '(bold intense))
+  (modus-themes-common-palette-overrides
+   `((bg-main "#1e1e2e")
+     (bg-active bg-main)
+     (fg-main "#cdd6f4")
+     (fg-active fg-main)
+     (fg-mode-line-active "#bac2de")
+     (bg-mode-line-active "#181825")
+     (fg-mode-line-inactive "#585b70")
+     (bg-mode-line-inactive "#181825")
+     (border-mode-line-active nil)
+     (border-mode-line-inactive nil)
+     (bg-tab-bar      "#1e1e2e")
+     (bg-tab-current  bg-main)
+     (bg-tab-other    "#1e1e2e")
+     (fg-prompt "#cba6f7")
+     (bg-prompt unspecified)
+     (bg-hover-secondary "#585b70")
+     (bg-completion "#45475a")
+     (fg-completion "#cdd6f4")
+     (bg-region "#585b70")
+     (fg-region "#cdd6f4")
+     (bg-hl-line "#2a2b3d")
+
+     (fg-line-number-active "#b4befe")
+     (fg-line-number-inactive "#7f849c")
+     (bg-line-number-active unspecified)
+     (bg-line-number-inactive "#1e1e2e")
+     (fringe "#1e1e2e")
+
+     (fg-heading-0 "#f38ba8")
+     (fg-heading-1 "#fab387")
+     (fg-heading-2 "#f9e2af")
+     (fg-heading-3 "#a6e3a1")
+     (fg-heading-4 "#74c7ec")
+
+     (fg-prose-verbatim "#a6e3a1")
+     (bg-prose-block-contents "#313244")
+     (fg-prose-block-delimiter "#9399b2")
+     (bg-prose-block-delimiter bg-prose-block-contents)
+
+     (accent-0 "#89b4fa")
+     (accent-1 "#89dceb")
+
+     (bg-changed "#3e4b6c")
+     (bg-changed-refine "#515D7B")
+     (bg-added "#364144")
+     (bg-added-refine "#4A5457")
+     (bg-removed "#443245")
+     (bg-removed-refine "#574658")
+
+     (bg-mark-delete "#443245")
+     (fg-mark-delete "#f38ba8")
+     (bg-mark-select "#3e4b6c")
+     (fg-mark-select "#89b4fa")
+
+     (bg-prominent-err "#443245")
+     (fg-prominent-err "#f38ba8")
+
+     (fg-completion-match-0 "#89b4fa")
+     (bg-completion-match-0 "#1e1e2e")
+     (fg-completion-match-1 "#f38ba8")
+     (bg-completion-match-1 "#1e1e2e")
+     (fg-completion-match-2 "#a6e3a1")
+     (bg-completion-match-2 "#1e1e2e")
+     (fg-completion-match-3 "#fab387")
+     (bg-completion-match-3 "#1e1e2e")
+
+     (date-weekday "#89b4fa")
+     (date-weekend "#fab387")
+
+     (property "#89b4fa")
+     (name "#89b4fa")
+     (number "#fab387")
+     (cursor  "#f5e0dc")
+     (warning "#f9e2af")
+     (err     "#f38ba8")
+     (info    "#94e2d5")
+     (fg-link  "#89b4fa")
+     (keyword "#cba6f7")
+     (identifier "#cba6f7")
+     (builtin "#89b4fa")
+     (comment "#9399b2")
+     (string "#a6e3a1")
+     (keyword   "#cba6f7")
+     (fnname    "#89b4fa")
+     (type      "#f9e2af")
+     (variable  "#fab387")
+     (docstring "#a6adc8")
+     (constant  "#f38ba8")))
+  :config
+  (modus-themes-with-colors
+    (custom-set-faces
+     `(newsticker-extra-face ((,c :foreground "#9399b2" :height 0.8 :slant italic)))
+     `(newsticker-feed-face ((,c :foreground "#f38ba8" :height 1.2 :weight bold)))
+     `(newsticker-treeview-selection-face ((,c :background "#3e5768" :foreground "#cdd6f5")))
+     `(newsticker-treeview-face ((,c :foreground "#cdd6f4")))
+     `(match ((,c :background "#3e5768" :foreground "#cdd6f5")))
+     `(gnus-header-from ((,c :foreground "#cba6f7")))
+     `(gnus-header-name ((,c :foreground "#a6e3a1")))
+     `(gnus-group-mail-3-empty ((,c :foreground "#8aadf4")))
+     `(gnus-group-mail-3 ((,c :foreground "#8aadf4")))
+     `(gnus-header-subject ((,c :foreground "#8aadf4")))
+     `(gnus-header-content ((,c :foreground "#7dc4e4")))
+     `(gnus-button ((,c :foreground "#8aadf4")))
+     `(vc-dir-header-value ((,c :foreground "#b4befe")))
+     `(vc-dir-file ((,c :foreground "#89b4fa")))
+     `(change-log-acknowledgment ((,c :foreground "#b4befe")))
+     `(change-log-name ((,c :foreground "#fab387")))
+     `(change-log-date ((,c :foreground "#a6e3a1")))
+     `(log-view-message ((,c :foreground "#b4befe")))
+     `(diff-context ((,c :foreground "#89b4fa")))
+     `(diff-header ((,c :foreground "#89b4fa")))
+     `(diff-file-header ((,c :foreground "#f5c2e7")))
+     `(diff-hunk-header ((,c :foreground "#fab387")))
+     `(modus-themes-search-current ((,c :background "#f38ba8" :foreground "#11111b" ))) ;; :foreground "#cdd6f4" -- Catppuccin default, not that visible...
+     `(modus-themes-search-lazy ((,c :background "#3e5768" :foreground "#cdd6f5")))     ;; :foreground "#cdd6f4" :background "#94e2d5" -- Catppuccin default, not that visible...
+     `(tab-bar ((,c :background "#1e1e2e" :foreground "#bac2de")))
+     `(tab-bar-tab ((,c :background "#1e1e2e" :underline t)))
+     `(tab-bar-tab-inactive ((,c :background "#1e1e2e" :foreground "#a6adc8")))
+     `(tab-bar-tab-group-current ((,c :background "#1e1e2e" :foreground "#bac2de" :underline t)))
+     `(tab-bar-tab-group-inactive ((,c :background "#1e1e2e" :foreground "#9399b2")))))
+  :init
+  (load-theme 'modus-vivendi-tinted t))
+
+
+;;; │ #SystemCrafters  Based Theme (hacked Modus)
+(use-package modus-themes
+  :if (eq emacs-solo-use-custom-theme 'crafters)
   :ensure nil
   :defer t
   :custom
@@ -2470,9 +2687,9 @@ are defining or executing a macro."
      ;; (border-mode-line-inactive bg-dim)
      (border-mode-line-active nil)
      (border-mode-line-inactive nil)
-     (bg-tab-bar      "#242837")
+     (bg-tab-bar      "#292D3E")
      (bg-tab-current  bg-main)
-     (bg-tab-other    "#242837")
+     (bg-tab-other    "#292D3E")
      (fg-prompt "#c792ea")
      (bg-prompt unspecified)
      (bg-hover-secondary "#676E95")
@@ -2511,38 +2728,11 @@ are defining or executing a macro."
      (constant "#f78c6c")))
   :config
   (modus-themes-with-colors
-   (custom-set-faces
-    `(tab-bar
-      ((,c
-        :background "#232635"
-        :foreground "#A6Accd"
-        ;; :box (:line-width 1 :color "#676E95")
-        )))
-    `(tab-bar-tab
-      ((,c
-        :background "#232635"
-        :underline t
-        ;; :box (:line-width 1 :color "#676E95")
-        )))
-    `(tab-bar-tab-inactive
-      ((,c
-        ;; :background "#232635"
-        ;; :box (:line-width 1 :color "#676E95")
-        )))
-    `(tab-bar-tab-group-current
-      ((,c
-        ;; :background "#232635"
-        ;; :box (:line-width 1 :color "#676E95")
-        :background "#232635"
-        :foreground "#A6Accd"
-        :underline t
-        )))
-    `(tab-bar-tab-group-inactive
-      ((,c
-        ;; :background "#232635"
-        ;; :box (:line-width 1 :color "#676E95")
-        :background "#232635"
-        :foreground "#777")))))
+    (custom-set-faces
+     `(tab-bar ((,c :background "#292D3E" :foreground "#A6Accd")))
+     `(tab-bar-tab ((,c :background "#292D3E" :underline t)))
+     `(tab-bar-tab-group-current ((,c :background "#292D3E" :foreground "#A6Accd" :underline t)))
+     `(tab-bar-tab-group-inactive ((,c :background "#292D3E" :foreground "#777")))))
   :init
   (load-theme 'modus-vivendi-tinted t))
 
@@ -2584,6 +2774,15 @@ are defining or executing a macro."
   :config
   (add-to-list 'treesit-language-source-alist '(javascript "https://github.com/tree-sitter/tree-sitter-javascript" "master" "src"))
   (add-to-list 'treesit-language-source-alist '(jsdoc "https://github.com/tree-sitter/tree-sitter-jsdoc" "master" "src")))
+
+;;; │ JSON-TS-MODE
+(use-package json-ts-mode
+  :mode "\\.json\\'"
+  :defer t
+  :hook
+  ((json-ts-mode-hook . (lambda ()
+                        (setq indent-tabs-mode nil)
+                        (add-hook 'after-save-hook #'emacs-solo-movements/format-current-file nil t)))))
 
 
 ;;; │ TYPESCRIPT-TS-MODE
@@ -2839,6 +3038,20 @@ If MANUAL is non-nil, the function was called interactively."
   (global-set-key (kbd "C-c C-p") #'emacs-solo-movements/format-current-file-manual)
 
 
+  (defun emacs-solo/add-format-on-save ()
+    "Add `emacs-solo-movements/format-current-file` to the current buffer's `after-save-hook`."
+    (interactive)
+    (add-hook 'after-save-hook #'emacs-solo-movements/format-current-file nil t)
+    (message "Format-on-save enabled for this buffer."))
+
+
+  (defun emacs-solo/remove-format-on-save ()
+    "Remove `emacs-solo-movements/format-current-file` from the current buffer's `after-save-hook`."
+    (interactive)
+    (remove-hook 'after-save-hook #'emacs-solo-movements/format-current-file t)
+    (message "Format-on-save disabled for this buffer."))
+
+
   (defun emacs-solo/transpose-split ()
     "Transpose a horizontal split into a vertical split, or vice versa."
     (interactive)
@@ -2973,6 +3186,7 @@ Replacing `Git-' with a branch symbol."
   ;; EMACS-31
   (setq mode-line-collapse-minor-modes
         '(abbrev-mode
+          auto-revert-mode
           eldoc-mode
           flyspell-mode
           smooth-scroll-mode
@@ -3077,14 +3291,13 @@ This works with bash, zsh, or fish)."
     "Apply simple rainbow coloring to parentheses, brackets, and braces in the current buffer.
 Opening and closing delimiters will have matching colors."
     (interactive)
-    (let ((colors '(font-lock-keyword-face
+    (let ((colors '(font-lock-function-name-face
+                    font-lock-builtin-face
                     font-lock-type-face
-                    font-lock-function-name-face
+                    font-lock-keyword-face
                     font-lock-variable-name-face
                     font-lock-constant-face
-                    font-lock-builtin-face
-                    font-lock-string-face
-                    )))
+                    font-lock-string-face)))
       (font-lock-add-keywords
        nil
        `((,(rx (or "(" ")" "[" "]" "{" "}"))
@@ -3538,17 +3751,25 @@ Marks lines as added, deleted, or changed."
 
   (defun emacs-solo/git-gutter-add-mark (&rest args)
     "Add symbols to the left margin based on Git diff statuses.
-   - '+' for added lines (lightgreen)
-   - '~' for changed lines (yellowish)
-   - '-' for deleted lines (tomato)."
+- '+' for added lines (uses `success` face)
+- '~' for changed lines (uses `warning` face)
+- '-' for deleted lines (uses `error` face)."
     (interactive)
-    (set-window-margins (selected-window) 2 0) ;; change to 1,2,3 if you want more columns
+    (set-window-margins (selected-window) 2 0)
     (remove-overlays (point-min) (point-max) 'emacs-solo--git-gutter-overlay t)
     (let ((lines-status (or (emacs-solo/git-gutter-process-git-diff) '())))
       (save-excursion
         (dolist (line-status lines-status)
-          (let ((line-num (car line-status))
-                (status (cdr line-status)))
+          (let* ((line-num (car line-status))
+                 (status (cdr line-status))
+                 (symbol (cond                                ;; Alternatives:
+                          ((string= status "added")   "┃")    ;; +  │ ▏┃
+                          ((string= status "changed") "┃")    ;; ~  │ ▏┃
+                          ((string= status "deleted") "┃")))  ;; _  _‾ x
+                 (face (cond
+                        ((string= status "added")   'success)
+                        ((string= status "changed") 'warning)
+                        ((string= status "deleted") 'error))))
             (when (and line-num status)
               (goto-char (point-min))
               (forward-line (1- line-num))
@@ -3558,17 +3779,7 @@ Marks lines as added, deleted, or changed."
                              (propertize " "
                                          'display
                                          `((margin left-margin)
-                                           ,(propertize
-                                             (cond                              ;; Alternatives:
-                                              ((string= status "added")   "┃")  ;; +  │ ▏┃
-                                              ((string= status "changed") "┃")  ;; ~
-                                              ((string= status "deleted") "┃")) ;; _
-                                             'face
-                                             `(:foreground
-                                               ,(cond
-                                                 ((string= status "added") "lightgreen")
-                                                 ((string= status "changed") "gold")
-                                                 ((string= status "deleted") "tomato"))))))))))))))
+                                           ,(propertize symbol 'face face)))))))))))
 
   (defun emacs-solo/timed-git-gutter-on()
     (run-at-time 0.1 nil #'emacs-solo/git-gutter-add-mark))
@@ -3742,6 +3953,9 @@ Windows are labeled starting from the top-left window and proceeding top to bott
 ;;; │ EMACS-SOLO-SUDO-EDIT
 ;;
 ;; Inspired by: https://codeberg.org/daviwil/dotfiles/src/branch/master/Emacs.org#headline-28
+;;
+;; From EMACS-31 onwards this wont be necessary, as C-x x @ will call
+;; `tramp-revert-buffer-with-sudo'.
 (use-package emacs-solo-sudo-edit
   :ensure nil
   :no-require t
@@ -3886,8 +4100,11 @@ If SECOND is non-nil, separate the results with a newline."
          (let ((output (with-current-buffer (process-buffer proc)
                          (buffer-string))))
            (kill-buffer (process-buffer proc))
-           (setq output (replace-regexp-in-string "^Follow.*\n" ""
-                                                  (replace-regexp-in-string "[\x0f]" "" output)))
+           (setq output (replace-regexp-in-string "[\u2800-\u28FF]" "*"
+                        (replace-regexp-in-string "―" "-"
+                        (replace-regexp-in-string "^Follow.*\n" ""
+                        (replace-regexp-in-string "[\x0f]" "" output)))))
+           ;; TODO: replace ― with -
            (with-current-buffer buffer
              (read-only-mode -1)
              (when second (insert "\n\n"))
@@ -3897,41 +4114,73 @@ If SECOND is non-nil, separate the results with a newline."
              (read-only-mode 1))))))))
 
 
-;;; │ EMACS-SOLO-OLLAMA
+;;; │ EMACS-SOLO-AI
 ;;
-(use-package emacs-solo-ollama
+(use-package emacs-solo-ai
   :ensure nil
   :no-require t
   :defer t
   :init
   (defun emacs-solo/ollama-run-model ()
     "Run `ollama list`, let the user choose a model, and open it in `ansi-term`.
-Asks for a prompt when run. If none is passed (RET), starts it interactive.
-If a region is selected, prompt for additional input and pass it as a query."
+If a region is selected, use it as a query. If a prompt is provided, it's prepended."
     (interactive)
     (let* ((output (shell-command-to-string "ollama list"))
-           (models (let ((lines (split-string output "\n" t)))
-                     (mapcar (lambda (line) (car (split-string line))) (cdr lines))))
+           (models (mapcar (lambda (line) (car (split-string line)))
+                           (cdr (split-string output "\n" t))))
            (selected (completing-read "Select Ollama model: " models nil t))
            (region-text (when (use-region-p)
-                          (shell-quote-argument
-                           (replace-regexp-in-string "\n" " "
-                                                     (buffer-substring-no-properties
-                                                      (region-beginning)
-                                                      (region-end))))))
-           (prompt (read-string "Ollama Prompt (leave it blank for interactive): " nil nil nil)))
+                          (buffer-substring-no-properties (region-beginning)
+                                                          (region-end))))
+           (prompt (read-string "Ollama Prompt (optional): " nil nil nil)))
       (when (and selected (not (string-empty-p selected)))
         (ansi-term "/bin/sh")
         (sit-for 1)
-        (let ((args (list (format "ollama run %s"
-                                  selected))))
-          (when (and prompt (not (string-empty-p prompt)))
-            (setq args (append args (list (format "\"%s\"" prompt)))))
-          (when region-text
-            (setq args (append args (list (format "\"%s\"" region-text)))))
+        (let* ((body (string-join (delq nil (list prompt region-text)) "\n"))
+               (escaped-body (replace-regexp-in-string "\"" "\\\\\"" body))
+               (command (format "printf \"%s\" | ollama run %s" escaped-body selected)))
+          (term-send-raw-string command)
+          (term-send-raw-string "\n")))))
 
-          (term-send-raw-string (string-join args " "))
-          (term-send-raw-string "\n"))))))
+
+  (defun emacs-solo/gemini-run-model (&optional interactive)
+    "Run the `gemini` CLI with optional prompt and/or selected region.
+
+If INTERACTIVE (prefix arg), start `gemini -i` inside `ansi-term`
+and preload the query from a temp file inside the project root.
+
+Otherwise, run non-interactive with `gemini -p` and show output in
+the *gemini* buffer."
+    (interactive "P")
+    (let* ((region (when (use-region-p)
+                     (buffer-substring-no-properties (region-beginning) (region-end))))
+           (prompt (read-string "Gemini Prompt (optional): " nil nil nil))
+           (body (string-join (delq nil (list prompt region)) "\n")))
+      (if interactive
+          ;; Interactive: temp file inside project root
+          (let* ((proj-root (or (vc-root-dir) default-directory))
+                 (tmpfile (expand-file-name
+                           (format ".gemini-query-%s.txt" (format-time-string "%s"))
+                           proj-root))
+                 (relpath (file-relative-name tmpfile proj-root)))
+            (with-temp-file tmpfile (insert body))
+            (ansi-term "/bin/bash")
+            (sit-for 0.1)
+            ;; must be relative to project root for Gemini to accept it
+            (term-send-raw-string (format "gemini -i @%s\n" relpath))
+            ;; delete temp file after 10 seconds
+            (run-at-time "10 sec" nil
+                         (lambda (f)
+                           (when (file-exists-p f)
+                             (delete-file f)))
+                         tmpfile))
+        ;; Non-interactive
+        (let ((buf (get-buffer-create "*gemini*")))
+          (with-current-buffer buf (erase-buffer))
+          (start-process "gemini" buf "gemini" "-p" body)
+          (pop-to-buffer buf)
+          (visual-line-mode)
+          (markdown-ts-mode))))))
 
 
 ;;; │ EMACS-SOLO-DIRED-GUTTER
@@ -4022,7 +4271,7 @@ If a region is selected, prompt for additional input and pass it as a query."
 ;;  Here we set the icons to be used by other `emacs-solo' features,
 ;;  like `emacs-solo-dired-icons' and `emacs-solo-eshell-icons'
 (use-package emacs-solo-file-icons
-  :if (or emacs-solo-enable-dired-icons emacs-solo-enable-eshell-icons)
+  :if emacs-solo-enabled-icons
   :ensure nil
   :no-require t
   :defer t
@@ -4053,14 +4302,15 @@ If a region is selected, prompt for additional input and pass it as a query."
       ("zst" . "📦")      ("tar.xz" . "📦")   ("tar.zst" . "📦") ("tar.gz" . "📦")
       ("tgz" . "📦")      ("bz2" . "📦")      ("mpg" . "🎬")     ("webp" . "🖼️")
       ("flv" . "🎬")      ("3gp" . "🎬")      ("ogv" . "🎬")     ("srt" . "🔠")
-      ("vtt" . "🔠")      ("cue" . "📀")
-      ("direddir" . "📁") ("diredfile" . "📄"))
+      ("vtt" . "🔠")      ("cue" . "📀")      ("terminal" . "💻") ("info" . "ℹ️")
+      ("direddir" . "📁") ("diredfile" . "📄") ("wranch" . "🔧"))
     "Icons for specific file extensions in Dired and Eshell."))
+
 
 ;;; │ EMACS-SOLO-DIRED-ICONS
 ;;
 (use-package emacs-solo-dired-icons
-  :if emacs-solo-enable-dired-icons
+  :if (memq 'dired emacs-solo-enabled-icons)
   :ensure nil
   :no-require t
   :defer t
@@ -4114,11 +4364,52 @@ If a region is selected, prompt for additional input and pass it as a query."
   (add-hook 'dired-after-readin-hook #'emacs-solo/dired-icons-add-icons))
 
 
+;;; │ EMACS-SOLO-IBUFFER-ICONS
+;;
+(use-package emacs-solo-ibuffer-icons
+  :if (memq 'ibuffer emacs-solo-enabled-icons)
+  :ensure nil
+  :no-require t
+  :defer t
+  :init
+  (defun emacs-solo/ibuffer-icon-for-buffer (buf)
+    "Return an icon for BUF: file-extension emoji if visiting a file,
+otherwise mode-based emoji."
+    (with-current-buffer buf
+      (if-let ((file (buffer-file-name)))
+          ;; File-based icons
+          (let* ((ext (file-name-extension file))
+                 (icon (and ext (assoc-default (downcase ext) emacs-solo/file-icons))))
+            (or icon (assoc-default "diredfile" emacs-solo/file-icons)))
+        ;; Mode-based icons for non-file buffers
+        (cond
+         ((derived-mode-p 'dired-mode)  (assoc-default "direddir" emacs-solo/file-icons))
+         ((derived-mode-p 'eshell-mode) (assoc-default "terminal" emacs-solo/file-icons))
+         ((derived-mode-p 'org-mode)    (assoc-default "terminal" emacs-solo/file-icons))
+         ((derived-mode-p 'shell-mode)  (assoc-default "terminal" emacs-solo/file-icons))
+         ((derived-mode-p 'term-mode)   (assoc-default "terminal" emacs-solo/file-icons))
+         ((derived-mode-p 'help-mode)   (assoc-default "info" emacs-solo/file-icons))
+         (t                             (assoc-default "wranch" emacs-solo/file-icons))))))
+
+  (define-ibuffer-column icon
+    (:name " ")
+    (emacs-solo/ibuffer-icon-for-buffer buffer))
+
+  ;; Update ibuffer formats
+  (setq ibuffer-formats
+        '((mark modified read-only locked " "
+                (icon 2 2 :left) " "
+                (name 30 30 :left :elide) " "
+                (size 9 -1 :right) " "
+                (mode 16 16 :left :elide) " "
+                filename-and-process))))
+
+
 ;;; │ EMACS-SOLO-ESHELL-ICONS
 ;;
 ;; Inspired by: https://www.reddit.com/r/emacs/comments/xboh0y/how_to_put_icons_into_eshell_ls/
 (use-package emacs-solo-eshell-icons
-  :if emacs-solo-enable-eshell-icons
+  :if (memq 'eshell emacs-solo-enabled-icons)
   :ensure nil
   :no-require t
   :defer t
@@ -4846,6 +5137,193 @@ If a stream is already playing, kill it before starting a new one."
   ;; BINDINGS
   (global-set-key (kbd "C-c h") 'simple-eldoc-box--make-frame))
 
+
+;;; │ EMACS-SOLO-COMPLETIONS-BOX
+;;
+;;    NOTE: This is usable, but admittedly, a work in progress.
+;;          An eldoc-box, but for the *completions* buffer, trying
+;;          to become a built-in 'corfu/company'
+
+(use-package emacs-solo-completions-box
+  :if emacs-solo-enable-completion-box
+  :ensure nil
+  :no-require t
+  :defer t
+  :init
+  ;; HOLDS CHILDFRAME
+  (defvar simple-completions-box--child-frame nil
+    "Holds the current completions child frame, if any.")
+
+  ;; CREATES CHILDFRAME
+  (defun simple-completions-box--make-frame ()
+    (interactive)
+    (when (frame-live-p simple-completions-box--child-frame)
+      (delete-frame simple-completions-box--child-frame))
+
+
+    ;; Delete current completions window
+    (delete-window (get-buffer-window (get-buffer "*Completions*")))
+
+    (let* ((parent (selected-frame))
+           (pos (posn-at-point))
+           (x (car (posn-x-y pos)))
+           (y (cdr (posn-x-y pos)))
+           (window (posn-window pos))
+           (frame (window-frame window))
+           (buffer (get-buffer "*Completions*"))
+           (line-count (with-current-buffer buffer
+                         (count-lines (point-min) (point-max))))
+           (max-lines 15)
+           (desired-lines (min max-lines line-count))
+           (frame (make-frame
+                   `((parent-frame . ,parent)
+                     (no-accept-focus . nil)
+                     (no-focus-on-map . nil)
+                     (internal-border-width . 1)
+                     (undecorated . t)
+                     (fullscreen . nil)
+                     (left . ,(+ (window-pixel-left) (car (posn-x-y (posn-at-point)))))
+                     (top . ,(+ (cdr (posn-x-y (posn-at-point)))
+                                (frame-char-height)))
+                     (width . 40)
+                     (height . ,desired-lines)
+                     (minibuffer . nil)
+                     (visibility . nil)
+                     (desktop-dont-save . t)
+                     (right-fringe . 0)
+                     (left-fringe . 0)
+                     (menu-bar-lines . 0)
+                     (tool-bar-lines . 0)
+                     (tab-bar-lines . 0)
+                     (line-spacing . 0)
+                     (unsplittable . t)
+                     (cursor-type . nil)
+                     (mouse-wheel-frame . t)
+                     (no-other-frame . t)
+                     (inhibit-double-buffering . t)
+                     (drag-internal-border . t)
+                     (no-special-glyphs . t)
+                     (name . "emacs-solo-completions-box")))))
+
+      ;; Set up the frame
+      (set-window-buffer (frame-root-window frame) buffer)
+      (set-frame-parameter frame 'visibility t)
+
+      ;; Watchdog
+      (simple-completions-box--start-frame-watchdog frame buffer)
+
+      ;; Force-disable mode line in all windows of this frame
+      (walk-windows
+       (lambda (win)
+         (when (eq (window-frame win) frame)
+           (set-window-parameter win 'mode-line-format 'none)
+           (set-window-parameter win 'header-line-format 'none))
+         nil frame))
+
+      ;; Darker background
+      (let* ((bg (face-background 'default nil parent))
+             (rgb (color-name-to-rgb bg))
+             (darker (apply #'color-rgb-to-hex
+                            (mapcar (lambda (c) (* 0.9 c)) rgb))))
+        (set-frame-parameter frame 'background-color darker)
+        (with-current-buffer buffer
+          (face-remap-add-relative 'default `(:background ,darker))))
+
+      (setq simple-completions-box--child-frame frame)
+
+      frame))
+
+
+  ;; WATCHDOG TO CLOSE THE FRAME
+  (defun simple-completions-box--start-frame-watchdog (frame buffer)
+    "Monitor FRAME and close it if BUFFER is no longer current in that frame."
+    (let ((watchdog
+           (lambda ()
+             (when (and (frame-live-p frame)
+                        (not (eq (selected-frame) frame)))
+               ;; Also check if buffer is no longer visible
+               (unless (eq (window-buffer (frame-selected-window frame)) buffer)
+                 (message "Completions frame lost focus or buffer changed — deleting.")
+                 (delete-frame frame))))))
+      ;; Store the lambda so we can remove it later if needed
+      (setq simple-completions-box--frame-watchdog watchdog)
+      (add-hook 'post-command-hook watchdog)))
+
+  (defun simple-completions-box--stop-frame-watchdog ()
+    "Stop the completions frame watchdog."
+    (when simple-completions-box--frame-watchdog
+      (remove-hook 'post-command-hook simple-completions-box--frame-watchdog)
+      (setq simple-completions-box--frame-watchdog nil)))
+
+
+  ;; CLOSES THE BOX FRAME
+  (defun simple-completions-box--delete-frame ()
+    (interactive)
+    (when (frame-live-p simple-completions-box--child-frame)
+      (delete-frame simple-completions-box--child-frame)
+      (setq simple-completions-box--child-frame nil)))
+
+
+  ;; ADVISE COMPLETION COMMANDS TO CLOSE FRAME
+  (defun simple-completions-box--close-frame-advice (&rest _)
+    (delete-frame simple-completions-box--child-frame)
+    (setq simple-completions-box--child-frame nil)
+    (simple-completions-box--stop-frame-watchdog))
+
+
+  ;; SETUP ADVICE FOR KEY COMMANDS
+  (defun simple-completions-box--setup-advice ()
+    "Setup advice for completion commands that should close the frame."
+    (advice-add 'choose-completion :after #'simple-completions-box--close-frame-advice)
+    (advice-add 'quit-window :after #'simple-completions-box--close-frame-advice)
+    (advice-add 'delete-completion-window :after #'simple-completions-box--close-frame-advice)
+    (advice-add 'minibuffer-choose-completion :after #'simple-completions-box--close-frame-advice)
+    (advice-add 'keyboard-quit :after #'simple-completions-box--close-frame-advice)
+    (advice-add 'handle-switch-frame :after #'simple-completions-box--close-frame-advice))
+
+  ;; REMOVE ADVICE WHEN DONE
+  (defun simple-completions-box--remove-advice ()
+    "Remove advice from completion commands."
+    (advice-remove 'choose-completion #'simple-completions-box--close-frame-advice)
+    (advice-remove 'quit-window #'simple-completions-box--close-frame-advice)
+    (advice-remove 'delete-completion-window #'simple-completions-box--close-frame-advice)
+    (advice-remove 'minibuffer-choose-completion #'simple-completions-box--close-frame-advice)
+    (advice-remove 'keyboard-quit #'simple-completions-box--close-frame-advice)
+    (advice-remove 'handle-switch-frame #'simple-completions-box--close-frame-advice))
+
+  ;; REMOVE INSTRUCTION LINES
+  (defun remove-completions-help-text ()
+    "Remove the first 3 help text lines from *Completions* buffer and go to beginning."
+    (when (string= (buffer-name) "*Completions*")
+      (save-excursion
+        (save-restriction
+          (widen)
+          (let ((inhibit-read-only t))
+            (goto-char (point-min))
+            ;; Delete first 3 lines unconditionally
+            (delete-region (point)
+                           (progn (forward-line 3) (point))))))))
+
+  (defun setup-completions-hook ()
+    (remove-completions-help-text)
+    (run-with-timer 0.001 nil #'remove-completions-help-text))
+
+  (add-hook 'completion-list-mode-hook #'setup-completions-hook)
+
+  ;; HOOK INTO COMPLETION DISPLAY
+  (defun simple-completions-box--display-completions ()
+    "Display completions in child frame when *Completions* buffer is shown."
+    (when (get-buffer "*Completions*")
+      (simple-completions-box--make-frame)
+      (simple-completions-box--setup-advice)
+
+      ;; Clean up when completions buffer is killed
+      (with-current-buffer "*Completions*"
+        (add-hook 'kill-buffer-hook #'simple-completions-box--remove-advice nil t)
+        (add-hook 'kill-buffer-hook #'simple-completions-box--delete-frame nil t)
+        (add-hook 'post-command-hook #'simple-completions-box--delete-frame nil t))))
+
+  (add-hook 'completion-setup-hook 'simple-completions-box--display-completions))
 
 
 (provide 'init)
